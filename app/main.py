@@ -5,11 +5,15 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import ensure_runtime_dirs, settings
 from .db import Base, engine
+from .demo_seed import seed_demo_data
 from .routers.api import router as api_router
 from .web import router as web_router
 
 ensure_runtime_dirs()
 Base.metadata.create_all(bind=engine)
+
+if settings.demo_data:
+    seed_demo_data()
 
 app = FastAPI(
     title=settings.app_name,
