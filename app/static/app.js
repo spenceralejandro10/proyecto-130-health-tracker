@@ -406,7 +406,7 @@ function renderSleep(series){
 function renderWeight(d, series){
   $('weight').textContent=`${num(d.current_weight_kg)} kg`;
   $('weightStart').textContent=`${num(d.baseline_weight_kg)} kg`;
-  $('weightChange').textContent=signed(d.change_from_baseline_kg,1,' kg');
+  $('weightChange').textContent=naturalChange('weight_kg',d.baseline_weight_kg,d.current_weight_kg,'kg');
   $('weightAvg').textContent=`${num(d.moving_avg_7d_kg)} kg`;
   $('goalWeight').textContent=`${num(d.goal_weight_kg)} kg`;
 
@@ -416,8 +416,8 @@ function renderWeight(d, series){
 
   const rangeSummary=series.analysis?.metric_summaries?.weight_kg;
   $('weightStatus').textContent=rangeSummary?.sample_count>=2
-    ? `Período: ${signed(rangeSummary.delta_period,1,' kg')}`
-    : 'Sin comparación suficiente en el período';
+    ? naturalChange('weight_kg',rangeSummary.first,rangeSummary.current,'kg')
+    : 'Sin comparación suficiente';
   $('weightExplanation').textContent=rangeSummary?.headline
     || d.interpretation?.metric_messages?.weight_kg
     || 'Sin una medición anterior comparable.';
