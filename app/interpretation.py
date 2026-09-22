@@ -80,7 +80,7 @@ def _signed(value: float | None, digits: int = 2) -> str:
 def _direction(delta: float | None, band: float) -> str:
     if delta is None:
         return "sin_comparacion"
-    if abs(delta) <= band:
+    if abs(delta) < 1e-9:
         return "estable"
     return "subio" if delta > 0 else "bajo"
 
@@ -213,7 +213,24 @@ def _direct_metric_message(obs: dict[str, Any]) -> str:
 
 
 def _metric_messages(observations: list[dict[str, Any]]) -> dict[str, str]:
-    return {obs["key"]: _direct_metric_message(obs) for obs in observations}
+    result = {obs["key"]: _direct_metric_message(obs) for obs in observations}
+    by_key = {obs["key"]: obs for obs in observations}
+
+    fat = by_key.get("fat_mass_est_kg")
+    if fat and fat.get("previous") is not None:
+        result["body_fat_pct"] = (
+            result.get("body_fat_pct", "")
+            + f" Masa grasa estimada: {_fmt(fat['previous'])} kg → {_fmt(fat['current'])} kg."
+        ).strip()
+
+    water = by_key.get("water_mass_est_kg")
+    if water and water.get("previous") is not None:
+        result["body_water_pct"] = (
+            result.get("body_water_pct", "")
+            + f" Agua corporal estimada: {_fmt(water['previous'])} kg → {_fmt(water['current'])} kg."
+        ).strip()
+
+    return result
 
 
 def _activity_met(row: Activity) -> float:
@@ -850,8 +867,8 @@ def interpret_body_composition(db: Session) -> dict[str, Any]:
     confidence = _confidence(current, previous, snapshots)
     weight_delta = _delta(current, previous, "weight_kg") or 0.0
 
-    if abs(weight_delta) <= GUARD_BANDS["weight_kg"]:
-        headline = f"Peso prácticamente estable: {_fmt(_value(previous, 'weight_kg'))} → {_fmt(_value(current, 'weight_kg'))} kg."
+    if abs(weight_delta) < 1e-9:
+        headline = f"Peso sin cambio: {_fmt(_value(previous, 'weight_kg'))} → {_fmt(_value(current, 'weight_kg'))} kg."
     elif weight_delta > 0:
         headline = f"Peso subió {_fmt(abs(weight_delta))} kg: {_fmt(_value(previous, 'weight_kg'))} → {_fmt(_value(current, 'weight_kg'))} kg."
     else:
