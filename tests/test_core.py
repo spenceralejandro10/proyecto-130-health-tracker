@@ -90,12 +90,12 @@ def test_export_contains_audit():
 
 def test_same_evidence_can_create_multiple_metrics():
     base = {
-        "captured_at": "2026-09-23T06:10:00",
+        "captured_at": "2026-09-22T07:10:00",
         "unit": "%",
         "source": "Xiaomi Mi Body Composition Scale 2",
         "origin": "device_estimated",
         "validation_status": "estimated",
-        "source_event_id": "xiaomi-summary-2026-09-23",
+        "source_event_id": "xiaomi-summary-2026-09-22-core",
     }
     fat = {**base, "metric_key": "body_fat_pct", "value": 32.1}
     water = {**base, "metric_key": "body_water_pct", "value": 48.2}
