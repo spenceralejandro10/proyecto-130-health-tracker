@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..audit import audit
+from ..config import settings
 from ..db import get_db
 from ..models import (
     Activity,
