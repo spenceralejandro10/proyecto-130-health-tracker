@@ -38,17 +38,25 @@
       </div>
     </section>
 
-    <section class="panel trend-panel">
-      <div class="panel-head">
-        <h2>Tendencia de peso</h2>
+    <section class="panel executive-panel">
+      <div class="panel-head executive-head">
+        <div>
+          <p class="eyebrow">MAPA DEL PROYECTO</p>
+          <h2>Estado general de los 130 días</h2>
+          <p class="chart-help">Una sola vista para relacionar peso, composición, actividad y recuperación. Cada línea conserva su valor real al señalarla.</p>
+        </div>
         <div class="tabs compact">
-          <button class="trend-window active" data-days="7">7d</button>
-          <button class="trend-window" data-days="14">14d</button>
-          <button class="trend-window" data-days="30">30d</button>
-          <button class="trend-window" data-days="130">130d</button>
+          <button class="trend-window" data-days="7">7 días</button>
+          <button class="trend-window active" data-days="14">14 días</button>
+          <button class="trend-window" data-days="30">30 días</button>
+          <button class="trend-window" data-days="130">Todo</button>
         </div>
       </div>
-      <div id="weightChart" class="chart"><span>Datos insuficientes.</span></div>
+      <div class="project-summary" id="projectSummary"></div>
+      <div class="legend" id="projectLegend"></div>
+      <div id="projectChart" class="project-chart"><span>Cargando evolución…</span></div>
+      <div class="chart-scale"><span>Inicio del período</span><strong>100 = punto de partida de cada indicador</strong><span>Estado actual</span></div>
+      <p class="chart-note">La escala común sirve para comparar dirección y estabilidad; no significa que kg, %, horas y minutos sean equivalentes. Los datos de composición de la báscula son estimaciones del dispositivo.</p>
     </section>
 
     <section class="two-col">
