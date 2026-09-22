@@ -9,7 +9,7 @@ def _metric(day: str, key: str, value: float, unit: str, origin: str = "device_e
     response = client.post(
         "/api/metrics",
         json={
-            "captured_at": f"{day}T06:15:00-05:00",
+            "captured_at": f"{day}T08:15:00-05:00",
             "metric_key": key,
             "value": value,
             "unit": unit,
