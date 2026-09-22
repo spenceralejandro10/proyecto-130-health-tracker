@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
@@ -7,12 +7,12 @@ from .db import Base
 
 
 class TimestampMixin:
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow_naive, nullable=False)
 
 
 class MetricRecord(Base, TimestampMixin):
     __tablename__ = "metric_records"
-    __table_args__ = (UniqueConstraint("source_event_id", name="uq_metric_source_event"),)
+    __table_args__ = (UniqueConstraint("source_event_id", "metric_key", name="uq_metric_source_event_key"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     captured_at: Mapped[datetime] = mapped_column(DateTime, index=True, nullable=False)
@@ -134,7 +134,7 @@ class ReminderEvent(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     reminder_id: Mapped[int] = mapped_column(ForeignKey("reminders.id"), index=True)
     action: Mapped[str] = mapped_column(String(32), nullable=False)
-    event_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    event_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow_naive, nullable=False)
     snoozed_until: Mapped[datetime | None] = mapped_column(DateTime)
 
 
@@ -142,7 +142,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    occurred_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow_naive, index=True)
     entity_type: Mapped[str] = mapped_column(String(80), nullable=False)
     entity_id: Mapped[str | None] = mapped_column(String(80))
     action: Mapped[str] = mapped_column(String(80), nullable=False)
