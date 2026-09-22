@@ -26,6 +26,8 @@ const COLORS = {
   activity_minutes:'#475569'
 };
 
+let selectedMetric = 'all';
+
 const planByDay = {
   0:'Recuperación / caminata suave opcional',
   1:'Pecho + tríceps',
@@ -69,34 +71,64 @@ function sparkline(el, points, options={}){
   el.innerHTML=`<svg viewBox="0 0 ${w} ${h}" aria-hidden="true">${extra}<path class="spark-line" d="${path}"></path>${coords.map((c,i)=>`<circle class="spark-dot" cx="${c[0]}" cy="${c[1]}" r="${i===coords.length-1?3.5:2}"><title>${fmtDate(points[i].date)}: ${points[i].value}</title></circle>`).join('')}</svg>`;
 }
 
+function renderResearchSummary(series){
+  const analysis=series.analysis||{};
+  const summaries=analysis.metric_summaries||{};
+  const period=`${analysis.from_date||'—'} → ${analysis.to_date||'—'}`;
+  $('trendPeriodLabel').textContent=`Período visible: ${period} · ${series.days} días`;
+
+  if(selectedMetric!=='all' && summaries[selectedMetric]){
+    const s=summaries[selectedMetric];
+    $('researchSummary').innerHTML=`<div class="trend-readout">
+      <strong>${escapeHtml(s.headline)}</strong>
+      <span>${s.sample_count} registros · promedio ${num(s.average,1)} ${escapeHtml(s.unit)} · mínimo ${num(s.minimum,1)} · máximo ${num(s.maximum,1)}</span>
+    </div>`;
+    $('chartFocusNote').textContent=`${METRICS[selectedMetric].label}: se muestran únicamente sus cambios dentro del período seleccionado.`;
+    return;
+  }
+
+  const findings=(analysis.findings||[]).slice(0,6);
+  $('researchSummary').innerHTML=findings.length
+    ? `<div class="trend-readout"><strong>Lectura del período</strong>${findings.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div>`
+    : '<div class="trend-readout"><strong>Sin cambios comparables suficientes en este período.</strong></div>';
+  $('chartFocusNote').textContent='Vista combinada de los indicadores con datos comparables en el período.';
+}
+
 function renderResearchChart(series){
   const keys=['weight_kg','body_fat_pct','muscle_mass_kg','body_water_pct','visceral_fat_index','sleep_hours','activity_minutes'];
-  const groups=keys.map(key=>({key,points:metricPoints(series,key)})).filter(g=>g.points.length>=2);
-  if(!groups.length){ $('projectChart').innerHTML='<span>Sin datos suficientes.</span>'; return; }
+  const allGroups=keys.map(key=>({key,points:metricPoints(series,key)})).filter(g=>g.points.length>=2);
+  if(!allGroups.length){
+    $('projectChart').innerHTML='<span>Sin datos suficientes.</span>';
+    $('projectLegend').innerHTML='';
+    renderResearchSummary(series);
+    return;
+  }
 
+  if(selectedMetric!=='all' && !allGroups.some(g=>g.key===selectedMetric)) selectedMetric='all';
+  const groups=selectedMetric==='all'?allGroups:allGroups.filter(g=>g.key===selectedMetric);
   const dates=[...new Set(groups.flatMap(g=>g.points.map(p=>p.date)))].sort();
   const normalized=groups.map(g=>{
     const base=g.points[0].value || 1;
-    return {...g, points:g.points.map(p=>({...p,change:((p.value/base)-1)*100}))};
+    return {...g,points:g.points.map(p=>({...p,change:((p.value/base)-1)*100}))};
   });
   const all=normalized.flatMap(g=>g.points.map(p=>p.change));
-  let min=Math.min(...all,-5), max=Math.max(...all,5);
-  const margin=Math.max((max-min)*0.12,1); min-=margin; max+=margin;
+  let min=Math.min(...all,-1),max=Math.max(...all,1);
+  const margin=Math.max((max-min)*0.16,.5); min-=margin; max+=margin;
 
   const w=1120,h=390,l=60,r=24,t=26,b=48;
-  const x=d=>l+(dates.indexOf(d)/(dates.length-1))*(w-l-r);
+  const x=d=>dates.length===1?(w+l-r)/2:l+(dates.indexOf(d)/(dates.length-1))*(w-l-r);
   const y=v=>t+((max-v)/(max-min))*(h-t-b);
 
   let svg=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Mapa comparativo del proyecto">`;
   for(let i=0;i<=4;i++){
-    const val=max-(i/4)*(max-min), yy=y(val);
+    const val=max-(i/4)*(max-min),yy=y(val);
     svg+=`<line class="grid-line" x1="${l}" y1="${yy}" x2="${w-r}" y2="${yy}"></line><text class="axis-text" x="${l-8}" y="${yy+4}" text-anchor="end">${val.toFixed(1)}%</text>`;
   }
   const zero=y(0);
-  svg+=`<line class="zero-line" x1="${l}" y1="${zero}" x2="${w-r}" y2="${zero}"></line><text class="zero-label" x="${w-r}" y="${zero-7}" text-anchor="end">Inicio = 0%</text>`;
+  svg+=`<line class="zero-line" x1="${l}" y1="${zero}" x2="${w-r}" y2="${zero}"></line><text class="zero-label" x="${w-r}" y="${zero-7}" text-anchor="end">Inicio del período = 0%</text>`;
 
   normalized.forEach(g=>{
-    const color=COLORS[g.key], label=METRICS[g.key].label, unit=METRICS[g.key].unit;
+    const color=COLORS[g.key],label=METRICS[g.key].label,unit=METRICS[g.key].unit;
     const d=g.points.map((p,i)=>`${i?'L':'M'} ${x(p.date).toFixed(1)} ${y(p.change).toFixed(1)}`).join(' ');
     svg+=`<path data-series="${g.key}" class="main-series" style="stroke:${color}" d="${d}"></path>`;
     g.points.forEach(p=>{
@@ -104,28 +136,23 @@ function renderResearchChart(series){
     });
   });
 
-  [dates[0],dates[Math.floor((dates.length-1)/2)],dates[dates.length-1]].forEach(d=>svg+=`<text class="date-text" x="${x(d)}" y="${h-14}" text-anchor="middle">${fmtDate(d)}</text>`);
+  const labelDates=[dates[0],dates[Math.floor((dates.length-1)/2)],dates[dates.length-1]].filter((d,i,a)=>d&&a.indexOf(d)===i);
+  labelDates.forEach(d=>svg+=`<text class="date-text" x="${x(d)}" y="${h-14}" text-anchor="middle">${fmtDate(d)}</text>`);
   svg+='</svg>';
   $('projectChart').innerHTML=svg;
 
-  $('projectLegend').innerHTML=normalized.map(g=>{
-    const latest=g.points[g.points.length-1], unit=METRICS[g.key].unit;
-    return `<button class="legend-item" data-key="${g.key}"><i style="background:${COLORS[g.key]}"></i><span>${METRICS[g.key].label}</span><strong>${latest.value.toFixed(unit==='min'||unit==='índice'?0:1)} ${unit}</strong></button>`;
+  const allButton=`<button class="legend-item ${selectedMetric==='all'?'active':''}" data-key="all"><span>Todas</span></button>`;
+  $('projectLegend').innerHTML=allButton+allGroups.map(g=>{
+    const latest=g.points[g.points.length-1],unit=METRICS[g.key].unit;
+    return `<button class="legend-item ${selectedMetric===g.key?'active':''}" data-key="${g.key}"><i style="background:${COLORS[g.key]}"></i><span>${METRICS[g.key].label}</span><strong>${latest.value.toFixed(unit==='min'||unit==='índice'?0:1)} ${unit}</strong></button>`;
   }).join('');
 
   document.querySelectorAll('.legend-item').forEach(btn=>btn.addEventListener('click',()=>{
-    const key=btn.dataset.key, hidden=btn.classList.toggle('muted');
-    document.querySelectorAll(`[data-series="${key}"]`).forEach(el=>el.classList.toggle('series-hidden',hidden));
+    selectedMetric=btn.dataset.key||'all';
+    renderResearchChart(series);
   }));
 
-  const summaries=[];
-  for(const key of ['weight_kg','body_fat_pct','muscle_mass_kg','sleep_hours']){
-    const p=metricPoints(series,key); if(p.length<2) continue;
-    const first=p[0].value,last=p[p.length-1].value,diff=last-first,unit=METRICS[key].unit;
-    const label=METRICS[key].label;
-    summaries.push(`<span><b>${label}</b> ${num(first)} → ${num(last)} ${unit} <em>(${signed(diff,1)})</em></span>`);
-  }
-  $('researchSummary').innerHTML=summaries.join('');
+  renderResearchSummary(series);
 }
 
 function renderInterpretation(d){
@@ -133,6 +160,9 @@ function renderInterpretation(d){
   if(!a) return;
   const confidence=a.confidence?.level||'baja';
   $('analysisConfidence').textContent=`Confianza ${confidence}`;
+  $('analysisPeriod').textContent=a.compared_with
+    ? `Comparación: ${a.compared_with} → ${a.as_of}`
+    : `Fecha de referencia: ${a.as_of||'sin datos'}`;
   $('analysisHeadline').textContent=a.headline||'Sin interpretación disponible.';
   $('analysisSummary').textContent=a.summary||'';
 
@@ -143,59 +173,82 @@ function renderInterpretation(d){
   };
   const observations=a.observations||[];
   $('analysisObservations').innerHTML=observations.length?observations.map(o=>{
-    const delta=o.delta==null?'Sin comparación':`Cambio ${signed(o.delta,2,' '+o.unit)}`;
+    const last=o.delta==null?'Sin comparación anterior':`vs anterior ${signed(o.delta,2,' '+(o.delta_unit||o.unit))}`;
+    const base=o.delta_baseline==null?'':` · vs inicio ${signed(o.delta_baseline,2,' '+(o.delta_unit||o.unit))}`;
     return `<div class="analysis-observation">
       <span>${escapeHtml(o.label)}</span>
       <strong>${escapeHtml(num(o.current,2))} ${escapeHtml(o.unit)}</strong>
-      <small>${escapeHtml(delta)}</small>
+      <small>${escapeHtml(last+base)}</small>
       <small class="analysis-kind">${escapeHtml(kindLabels[o.kind]||o.kind)}</small>
     </div>`;
-  }).join(''):'<p class="plain-note">Todavía no hay suficientes variables comparables.</p>';
+  }).join(''):'<p class="plain-note">Sin variables corporales comparables.</p>';
 
-  const hypotheses=a.hypotheses||[];
-  $('analysisHypotheses').innerHTML=hypotheses.length?hypotheses.map(h=>`<div class="analysis-hypothesis">
+  const findings=a.hypotheses||[];
+  $('analysisHypotheses').innerHTML=findings.length?findings.map(h=>`<div class="analysis-hypothesis">
     <div class="analysis-hypothesis-head">
       <strong>${escapeHtml(h.label)}</strong>
       <span class="analysis-confidence">Confianza ${escapeHtml(h.confidence)}</span>
     </div>
     <p>${escapeHtml(h.explanation)}</p>
-  </div>`).join(''):'<p class="plain-note">El motor todavía no genera hipótesis porque falta una segunda medición comparable.</p>';
+  </div>`).join(''):'<p class="plain-note">No hay un cambio corporal adicional que explicar todavía.</p>';
+
+  const context=a.context_findings||[];
+  $('analysisContext').innerHTML=context.length
+    ? `<strong>Contexto del mismo experimento</strong>${context.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}`
+    : '';
 
   $('analysisDecisionNote').textContent=a.decision_note||'';
   $('analysisLimits').innerHTML=`<ul>${(a.limits||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>`;
 }
 
 function renderComposition(series, interpretation=null){
-  const interpretationMessages=interpretation?.metric_messages||{};
+  const latestMessages=interpretation?.metric_messages||{};
+  const rangeSummaries=series.analysis?.metric_summaries||{};
   const cfg=[
-    ['body_fat_pct','bodyFat','bodyFatStart','bodyFatChange','bodyFatChart','bodyFatText','%','Si baja de forma sostenida mientras la fuerza se mantiene, la señal es favorable.'],
-    ['muscle_mass_kg','muscleMass','muscleStart','muscleChange','muscleChart','muscleText','kg','Cambios pequeños pueden ser ruido de la báscula; se contrasta con fuerza y tendencia.'],
-    ['body_water_pct','bodyWater','waterStart','waterChange','waterChart','waterText','%','Se sigue como tendencia. No indica por sí solo cuánto debes beber.'],
-    ['visceral_fat_index','visceralFat','visceralStart','visceralChange','visceralChart','visceralText','índice','Se interpreta por tendencia del mismo dispositivo, no como medición clínica exacta.']
+    ['body_fat_pct','bodyFat','bodyFatStart','bodyFatChange','bodyFatChart','bodyFatText','bodyFatPeriod','%'],
+    ['muscle_mass_kg','muscleMass','muscleStart','muscleChange','muscleChart','muscleText','musclePeriod','kg'],
+    ['body_water_pct','bodyWater','waterStart','waterChange','waterChart','waterText','waterPeriod','%'],
+    ['visceral_fat_index','visceralFat','visceralStart','visceralChange','visceralChart','visceralText','visceralPeriod','índice']
   ];
-  cfg.forEach(([key,currentId,startId,changeId,chartId,textId,unit,text])=>{
+  $('compositionPeriodNote').textContent=`Período visible: ${series.analysis?.from_date||'—'} → ${series.analysis?.to_date||'—'}`;
+
+  cfg.forEach(([key,currentId,startId,changeId,chartId,textId,periodId,unit])=>{
     const p=metricPoints(series,key);
-    if(!p.length) return;
+    if(!p.length){
+      $(currentId).textContent='—';
+      $(startId).textContent='—';
+      $(changeId).textContent='—';
+      $(periodId).textContent='Sin registros en el período.';
+      $(textId).textContent='Sin comparación disponible.';
+      sparkline($(chartId),[]);
+      return;
+    }
     const first=p[0].value,last=p[p.length-1].value,diff=last-first;
     $(currentId).textContent=`${num(last)} ${unit}`;
     $(startId).textContent=`${num(first)} ${unit}`;
     $(changeId).textContent=signed(diff,1,unit==='%'?' puntos':' '+unit);
-    $(textId).textContent=interpretationMessages[key]||text;
+    $(periodId).textContent=rangeSummaries[key]?.headline||`${METRICS[key].label}: ${num(last)} ${unit}.`;
+    $(textId).textContent=latestMessages[key]||'Sin una medición anterior comparable.';
     sparkline($(chartId),p);
   });
 }
 
 function renderSleep(series){
   const p=metricPoints(series,'sleep_hours');
-  if(!p.length) return;
+  const summary=series.analysis?.metric_summaries?.sleep_hours;
+  if(!p.length){
+    $('sleep').textContent='—';
+    $('sleepAvg').textContent='—';
+    $('sleepInterpretation').textContent='Sin registros de sueño en el período.';
+    sparkline($('sleepMiniChart'),[]);
+    return;
+  }
   const last=p[p.length-1].value;
-  const recent=p.slice(-7), avg=recent.reduce((a,b)=>a+b.value,0)/recent.length;
+  const recent=p.slice(-7),avg=recent.reduce((a,b)=>a+b.value,0)/recent.length;
   $('sleep').textContent=`${num(last)} h`;
   $('sleepAvg').textContent=`${num(avg)} h`;
   sparkline($('sleepMiniChart'),p,{targetMin:7,targetMax:9});
-  if(avg<7) $('sleepInterpretation').textContent=`Promedio de 7 días: ${num(avg)} h. Está por debajo del objetivo configurado de 7–9 h.`;
-  else if(avg<=9) $('sleepInterpretation').textContent=`Promedio de 7 días: ${num(avg)} h. Se mantiene dentro del objetivo configurado.`;
-  else $('sleepInterpretation').textContent=`Promedio de 7 días: ${num(avg)} h. Está por encima del rango configurado; revisar contexto.`;
+  $('sleepInterpretation').textContent=summary?.headline||`Sueño: ${num(last)} h en el último registro.`;
 }
 
 function renderWeight(d, series){
@@ -208,23 +261,14 @@ function renderWeight(d, series){
   const total=Math.max((d.baseline_weight_kg||0)-(d.goal_weight_kg||0),0.1);
   const done=Math.max((d.baseline_weight_kg||0)-(d.current_weight_kg||0),0);
   $('weightProgress').style.width=`${Math.min(100,Math.max(0,(done/total)*100))}%`;
-  $('weightStatus').textContent=done>0?`${((done/total)*100).toFixed(0)}% del recorrido hacia la meta`:'Línea base';
 
-  if(d.current_weight_kg!=null && d.moving_avg_7d_kg!=null){
-    if(d.current_weight_kg<d.moving_avg_7d_kg) $('weightExplanation').textContent='El peso de hoy está por debajo del promedio de los últimos 7 días. El promedio es mayor porque incluye días anteriores con más peso; eso es coherente con una bajada reciente.';
-    else if(d.current_weight_kg>d.moving_avg_7d_kg) $('weightExplanation').textContent='El peso de hoy está por encima del promedio de 7 días. Se observa la tendencia antes de concluir si es un cambio real.';
-    else $('weightExplanation').textContent='El peso de hoy coincide aproximadamente con el promedio reciente.';
-  }
-
-  if(d.interpretation?.metric_messages?.weight_kg){
-    $('weightExplanation').textContent=d.interpretation.metric_messages.weight_kg;
-  }
-
-  const p=metricPoints(series,'weight_kg');
-  if(p.length>=2){
-    const diff=p[p.length-1].value-p[0].value;
-    $('weightStatus').textContent+=` · ${signed(diff,1,' kg')} en el período visible`;
-  }
+  const rangeSummary=series.analysis?.metric_summaries?.weight_kg;
+  $('weightStatus').textContent=rangeSummary?.sample_count>=2
+    ? `Período: ${signed(rangeSummary.delta_period,1,' kg')}`
+    : 'Sin comparación suficiente en el período';
+  $('weightExplanation').textContent=rangeSummary?.headline
+    || d.interpretation?.metric_messages?.weight_kg
+    || 'Sin una medición anterior comparable.';
 }
 
 const PROJECT_START = new Date('2026-09-22T00:00:00-05:00');
