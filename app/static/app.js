@@ -1,7 +1,10 @@
 const $ = (id) => document.getElementById(id);
 
-async function api(path) {
-  const response = await fetch(path, {headers: {'Content-Type':'application/json'}});
+async function api(path, options={}) {
+  const response = await fetch(path, {
+    ...options,
+    headers: {'Content-Type':'application/json', ...(options.headers||{})}
+  });
   if (!response.ok) throw new Error((await response.json().catch(()=>({detail:response.statusText}))).detail || 'Error');
   return response.json();
 }
@@ -44,6 +47,14 @@ function dateKey(v){ return String(v).slice(0,10); }
 function todayKey(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 function fmtDate(d){ return new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short'}); }
 function escapeHtml(value){ return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
+function naturalChange(key, previous, current, unit=''){
+  if(previous==null || current==null) return 'Sin comparación';
+  const a=Number(previous), b=Number(current);
+  const verb=b>a?'Subió':b<a?'Bajó':'Sin cambio';
+  if(key==='body_fat_pct' || key==='body_water_pct') return `${verb}: ${num(a,1)}% → ${num(b,1)}%`;
+  if(key==='visceral_fat_index') return `${verb}: ${num(a,0)} → ${num(b,0)}`;
+  return `${verb}: ${num(a,1)} → ${num(b,1)} ${unit}`.trim();
+}
 
 function metricPoints(series, key){
   if(key==='sleep_hours') return Object.entries(series.sleep_hours||{}).map(([date,value])=>({date,value:Number(value)})).sort((a,b)=>a.date.localeCompare(b.date));
@@ -83,7 +94,7 @@ function renderResearchSummary(series){
       <strong>${escapeHtml(s.headline)}</strong>
       <span>${s.sample_count} registros · promedio ${num(s.average,1)} ${escapeHtml(s.unit)} · mínimo ${num(s.minimum,1)} · máximo ${num(s.maximum,1)}</span>
     </div>`;
-    $('chartFocusNote').textContent=`${METRICS[selectedMetric].label} · ${s.sample_count} registros · cambio del período ${signed(s.delta_period,1,' '+s.delta_unit)}.`;
+    $('chartFocusNote').textContent=`${s.headline} · ${s.sample_count} registros en el período.`;
     return;
   }
 
@@ -155,6 +166,110 @@ function renderResearchChart(series){
   renderResearchSummary(series);
 }
 
+function renderGoalPaceChart(pace){
+  const el=$('goalPaceChart');
+  if(!el) return;
+  const points=(pace?.series||[]).filter(x=>x.required_kg_per_week!=null);
+  if(points.length<2){
+    el.innerHTML='<span class="empty-chart">La curva aparecerá cuando existan al menos dos pesajes.</span>';
+    return;
+  }
+  const vals=points.map(p=>Number(p.required_kg_per_week));
+  const min=Math.min(...vals), max=Math.max(...vals), span=Math.max(max-min,0.1);
+  const w=1050,h=230,l=48,r=18,t=18,b=38;
+  const x=i=>l+(i/(points.length-1))*(w-l-r);
+  const y=v=>t+((max-v)/span)*(h-t-b);
+  const path=points.map((p,i)=>`${i?'L':'M'} ${x(i).toFixed(1)} ${y(Number(p.required_kg_per_week)).toFixed(1)}`).join(' ');
+  let svg=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Ritmo semanal requerido para llegar a 90 kg">`;
+  for(let i=0;i<=3;i++){
+    const value=max-(i/3)*span, yy=y(value);
+    svg+=`<line class="grid-line" x1="${l}" y1="${yy}" x2="${w-r}" y2="${yy}"></line><text class="axis-text" x="${l-8}" y="${yy+4}" text-anchor="end">${value.toFixed(2)}</text>`;
+  }
+  svg+=`<path class="goal-pace-line" d="${path}"></path>`;
+  points.forEach((p,i)=>svg+=`<circle class="goal-pace-dot" cx="${x(i)}" cy="${y(Number(p.required_kg_per_week))}" r="${i===points.length-1?5:3}"><title>${fmtDate(p.date)}: ${Number(p.required_kg_per_week).toFixed(2)} kg/semana requeridos · peso ${Number(p.weight_kg).toFixed(1)} kg</title></circle>`);
+  const labels=[0,Math.floor((points.length-1)/2),points.length-1].filter((v,i,a)=>a.indexOf(v)===i);
+  labels.forEach(i=>svg+=`<text class="date-text" x="${x(i)}" y="${h-12}" text-anchor="middle">${fmtDate(points[i].date)}</text>`);
+  svg+='</svg>';
+  el.innerHTML=svg;
+}
+
+function renderGoalPace(d){
+  const p=d.goal_pace||{};
+  const required=p.required_kg_per_week;
+  const actual=p.actual_kg_per_week;
+  const diff=p.difference_to_target_kg;
+  $('requiredWeeklyLoss').textContent=required==null?'—':num(required,2);
+  $('paceCurrentWeight').textContent=p.current_weight_kg==null?'—':`${num(p.current_weight_kg,1)} kg`;
+  $('paceRemainingWeight').textContent=p.remaining_kg==null?'—':`${num(p.remaining_kg,1)} kg`;
+  $('paceTargetToday').textContent=p.target_weight_today==null?'—':`${num(p.target_weight_today,1)} kg`;
+
+  if(actual==null) $('paceActualWeekly').textContent='Aún sin ritmo';
+  else if(actual>0) $('paceActualWeekly').textContent=`Bajando ${num(actual,2)} kg/sem`;
+  else if(actual<0) $('paceActualWeekly').textContent=`Subiendo ${num(Math.abs(actual),2)} kg/sem`;
+  else $('paceActualWeekly').textContent='Sin cambio';
+
+  if(required!=null && p.current_weight_kg!=null){
+    $('goalPaceSentence').textContent=`Con ${num(p.current_weight_kg,1)} kg y ${p.days_left} días restantes, faltan ${num(p.remaining_kg,1)} kg para 90 kg. El ritmo matemático requerido desde hoy es ${num(required,2)} kg por semana.`;
+  } else $('goalPaceSentence').textContent='Aún no hay datos suficientes para calcular el ritmo hacia la meta.';
+
+  if(p.status==='meta_alcanzada') $('goalPaceStatus').textContent='La meta de 90 kg ya fue alcanzada.';
+  else if(diff!=null && diff>0.3) $('goalPaceStatus').textContent=`Hoy estás ${num(diff,1)} kg por encima de la ruta lineal hacia 90 kg. El ritmo requerido se ajustó a ${num(required,2)} kg/semana.`;
+  else if(diff!=null && diff<-0.3) $('goalPaceStatus').textContent=`Hoy estás ${num(Math.abs(diff),1)} kg por debajo de la ruta lineal. El ritmo requerido bajó a ${num(required,2)} kg/semana.`;
+  else if(required!=null) $('goalPaceStatus').textContent=`El peso está cerca de la ruta calculada. Ritmo requerido actual: ${num(required,2)} kg/semana.`;
+  else $('goalPaceStatus').textContent='—';
+
+  renderGoalPaceChart(p);
+}
+
+function renderEnergyHistory(series){
+  const rows=series.energy_history||[];
+  $('energyHistoryRange').textContent=`${series.days} días`;
+  const el=$('energyChart');
+  if(!rows.length){
+    el.innerHTML='<span class="empty-chart">Sin historial energético.</span>';
+    $('energyHistorySummary').textContent='Aún no hay datos suficientes.';
+    return;
+  }
+  const usable=rows.filter(r=>r.accounted_expenditure_kcal!=null || r.intake_kcal!=null);
+  if(!usable.length){
+    el.innerHTML='<span class="empty-chart">Sin valores energéticos calculables.</span>';
+    return;
+  }
+
+  const seriesDefs=[
+    {key:'accounted_expenditure_kcal',label:'Gasto contabilizado',cls:'energy-line-spend'},
+    {key:'intake_kcal',label:'Ingesta',cls:'energy-line-intake'}
+  ];
+  const values=usable.flatMap(r=>seriesDefs.map(s=>r[s.key]).filter(v=>v!=null).map(Number));
+  const min=Math.max(0,Math.min(...values)-150),max=Math.max(...values)+150,span=Math.max(max-min,100);
+  const w=1050,h=280,l=56,r=20,t=20,b=42;
+  const x=i=>l+(usable.length===1?0.5:i/(usable.length-1))*(w-l-r);
+  const y=v=>t+((max-v)/span)*(h-t-b);
+  let svg=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Historial diario de calorías">`;
+  for(let i=0;i<=4;i++){
+    const value=max-(i/4)*span,yy=y(value);
+    svg+=`<line class="grid-line" x1="${l}" y1="${yy}" x2="${w-r}" y2="${yy}"></line><text class="axis-text" x="${l-8}" y="${yy+4}" text-anchor="end">${Math.round(value)}</text>`;
+  }
+  seriesDefs.forEach(s=>{
+    const pts=usable.map((row,i)=>({i,value:row[s.key]})).filter(p=>p.value!=null);
+    if(!pts.length) return;
+    const path=pts.map((p,j)=>`${j?'L':'M'} ${x(p.i).toFixed(1)} ${y(Number(p.value)).toFixed(1)}`).join(' ');
+    svg+=`<path class="${s.cls}" d="${path}"></path>`;
+    pts.forEach(p=>svg+=`<circle class="${s.cls}-dot" cx="${x(p.i)}" cy="${y(Number(p.value))}" r="3"><title>${s.label}: ${Math.round(Number(p.value))} kcal · ${fmtDate(usable[p.i].date)}</title></circle>`);
+  });
+  const labels=[0,Math.floor((usable.length-1)/2),usable.length-1].filter((v,i,a)=>a.indexOf(v)===i);
+  labels.forEach(i=>svg+=`<text class="date-text" x="${x(i)}" y="${h-12}" text-anchor="middle">${fmtDate(usable[i].date)}</text>`);
+  svg+='</svg>';
+  el.innerHTML=svg;
+
+  const last=usable[usable.length-1];
+  const parts=[];
+  if(last.accounted_expenditure_kcal!=null) parts.push(`Gasto contabilizado: ${Math.round(last.accounted_expenditure_kcal)} kcal`);
+  if(last.intake_kcal!=null) parts.push(`ingesta: ${Math.round(last.intake_kcal)} kcal`);
+  if(last.balance_kcal!=null) parts.push(`${last.balance_kcal<0?'déficit':'superávit'} parcial: ${Math.round(Math.abs(last.balance_kcal))} kcal`);
+  $('energyHistorySummary').textContent=`${fmtDate(last.date)} · ${parts.join(' · ')}.`;
+}
+
 function renderEnergy(d){
   const e=d.interpretation?.energy||{};
   const resting=e.resting_kcal_day;
@@ -207,8 +322,8 @@ function renderInterpretation(d){
   };
   const observations=a.observations||[];
   $('analysisObservations').innerHTML=observations.length?observations.map(o=>{
-    const last=o.delta==null?'Sin comparación anterior':`vs anterior ${signed(o.delta,2,' '+(o.delta_unit||o.unit))}`;
-    const base=o.delta_baseline==null?'':` · vs inicio ${signed(o.delta_baseline,2,' '+(o.delta_unit||o.unit))}`;
+    const last=o.delta==null?'Sin comparación anterior':naturalChange(o.key,o.previous,o.current,o.unit);
+    const base=(o.baseline==null || o.current==null || Number(o.baseline)===Number(o.previous))?'':` · Inicio ${num(o.baseline,1)} ${o.unit} → ahora ${num(o.current,1)} ${o.unit}`;
     return `<div class="analysis-observation">
       <span>${escapeHtml(o.label)}</span>
       <strong>${escapeHtml(num(o.current,2))} ${escapeHtml(o.unit)}</strong>
@@ -263,7 +378,7 @@ function renderComposition(series, interpretation=null){
     const first=p[0].value,last=p[p.length-1].value,diff=last-first;
     $(currentId).textContent=`${num(last)} ${unit}`;
     $(startId).textContent=`${num(first)} ${unit}`;
-    $(changeId).textContent=signed(diff,1,unit==='%'?' puntos':' '+unit);
+    $(changeId).textContent=naturalChange(key,first,last,unit);
     $(periodId).textContent=latestMessages[key]||rangeSummaries[key]?.headline||`${METRICS[key].label}: ${num(last)} ${unit}.`;
     $(textId).textContent=rangeSummaries[key]?.headline||'Sin una segunda lectura en el período.';
     sparkline($(chartId),p);
@@ -382,6 +497,7 @@ async function load(days=14){
       api('/api/activities?limit=250')
     ]);
     renderWeight(dashboard,series);
+    renderGoalPace(dashboard);
     renderStudy(dashboard);
     renderActivity(activities,series);
     renderSleep(series);
@@ -389,6 +505,7 @@ async function load(days=14){
     renderResearchChart(series);
     renderInterpretation(dashboard);
     renderEnergy(dashboard);
+    renderEnergyHistory(series);
     renderAlerts(dashboard);
     $('sync').textContent=`Actualizado ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
   }catch(e){
@@ -396,6 +513,41 @@ async function load(days=14){
     $('projectChart').innerHTML=`<span>Error al cargar: ${e.message}</span>`;
   }
 }
+
+document.querySelectorAll('.workspace-tab').forEach(btn=>btn.addEventListener('click',()=>{
+  const name=btn.dataset.tab;
+  document.querySelectorAll('.workspace-tab').forEach(x=>x.classList.toggle('active',x===btn));
+  document.querySelectorAll('.workspace-view').forEach(view=>{
+    const active=view.id===`tab-${name}`;
+    view.classList.toggle('active',active);
+    view.hidden=!active;
+  });
+}));
+
+const nutritionDate=$('nutritionDate');
+if(nutritionDate) nutritionDate.value=todayKey();
+const nutritionForm=$('nutritionForm');
+if(nutritionForm) nutritionForm.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const day=$('nutritionDate').value||todayKey();
+  const read=id=>{const v=$(id).value;return v===''?null:Number(v);};
+  const payload={
+    nutrition_date:day,
+    calories:read('nutritionCalories'),
+    protein_g:read('nutritionProtein'),
+    fat_g:read('nutritionFat'),
+    carbs_g:read('nutritionCarbs'),
+    source:'web'
+  };
+  try{
+    $('nutritionStatus').textContent='Guardando…';
+    await api(`/api/nutrition/${day}`,{method:'PUT',body:JSON.stringify(payload)});
+    $('nutritionStatus').textContent='Día guardado. El balance fue recalculado.';
+    await load(Number(document.querySelector('.range-btn.active')?.dataset.days||14));
+  }catch(e){
+    $('nutritionStatus').textContent=`No se pudo guardar: ${e.message}`;
+  }
+});
 
 document.querySelectorAll('.range-btn').forEach(btn=>btn.addEventListener('click',()=>{
   document.querySelectorAll('.range-btn').forEach(x=>x.classList.remove('active'));
