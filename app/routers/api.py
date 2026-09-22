@@ -21,6 +21,7 @@ from ..models import (
     ReminderEvent,
     SleepRecord,
     StrengthSet,
+    UserProfile,
 )
 from ..schemas import (
     ActivityCreate,
@@ -34,6 +35,7 @@ from ..schemas import (
     ReminderUpdate,
     SleepCreate,
     StrengthSetCreate,
+    ProfileUpdate,
 )
 from ..security import require_api_key
 from ..services import dashboard, due_reminders, metric_trend
@@ -62,6 +64,27 @@ def _create(db: Session, obj, entity_type: str, reason: str = "create"):
 @router.get("/health")
 def health():
     return {"status": "ok", "time": datetime.now(UTC).isoformat()}
+
+
+@router.get("/profile")
+def get_profile(db: Session = Depends(get_db)):
+    obj = db.scalar(select(UserProfile).order_by(UserProfile.id.asc()).limit(1))
+    return _columns(obj) if obj else None
+
+
+@router.put("/profile")
+def upsert_profile(payload: ProfileUpdate, db: Session = Depends(get_db)):
+    obj = db.scalar(select(UserProfile).order_by(UserProfile.id.asc()).limit(1))
+    if obj:
+        before = _columns(obj)
+        for key, value in payload.model_dump().items():
+            setattr(obj, key, value)
+        audit(db, entity_type="user_profile", entity_id=obj.id, action="update", before=before, after=_columns(obj), reason="profile_upsert")
+        db.commit()
+        db.refresh(obj)
+        return _columns(obj)
+    obj = UserProfile(**payload.model_dump())
+    return _create(db, obj, "user_profile", reason="profile_upsert")
 
 
 @router.post("/metrics", status_code=201)
