@@ -90,6 +90,48 @@ def trend(metric_key: str, days: int = Query(default=7, ge=1, le=365), db: Sessi
     return {"metric_key": metric_key, "days": days, "points": metric_trend(db, metric_key, days)}
 
 
+@router.get("/project-series")
+def project_series(days: int = Query(default=130, ge=7, le=365), db: Session = Depends(get_db)):
+    """Serie unificada para el tablero ejecutivo.
+
+    Devuelve datos crudos/estimados con unidades explícitas. La normalización
+    visual se realiza en el cliente para poder comparar escalas distintas sin
+    fingir que kg, %, horas y minutos son la misma magnitud.
+    """
+    start = datetime.now(settings.timezone).date() - timedelta(days=days - 1)
+    metric_keys = ["weight_kg", "body_fat_pct", "muscle_mass_kg", "body_water_pct", "visceral_fat_index"]
+    metrics = {}
+    for key in metric_keys:
+        metrics[key] = metric_trend(db, key, days)
+
+    activities = db.scalars(select(Activity).order_by(Activity.started_at.asc())).all()
+    activity_by_day = {}
+    integrated_by_day = {}
+    for row in activities:
+        day = row.started_at.date().isoformat()
+        if row.started_at.date() < start:
+            continue
+        activity_by_day[day] = round(activity_by_day.get(day, 0) + float(row.duration_min), 1)
+        if row.integrated:
+            integrated_by_day[day] = round(integrated_by_day.get(day, 0) + float(row.duration_min), 1)
+
+    sleeps = db.scalars(select(SleepRecord).order_by(SleepRecord.sleep_date.asc())).all()
+    sleep_by_day = {
+        row.sleep_date.isoformat(): round(row.duration_min / 60, 2)
+        for row in sleeps if row.duration_min is not None and row.sleep_date >= start
+    }
+
+    return {
+        "days": days,
+        "goal_weight_kg": settings.goal_weight_kg,
+        "metrics": metrics,
+        "activity_minutes": activity_by_day,
+        "integrated_minutes": integrated_by_day,
+        "sleep_hours": sleep_by_day,
+        "note": "Las series usan unidades distintas. El gráfico las normaliza contra su propia línea base y conserva los valores reales en etiquetas.",
+    }
+
+
 @router.post("/activities", status_code=201)
 def create_activity(payload: ActivityCreate, db: Session = Depends(get_db)):
     data = payload.model_dump()
