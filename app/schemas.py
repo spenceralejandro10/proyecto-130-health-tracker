@@ -101,7 +101,7 @@ class ReminderCreate(BaseModel):
     title: str
     kind: str = "activity"
     time_local: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-    recurrence: str = "daily"
+    recurrence: Literal["daily"] = "daily"
     active: bool = True
     snooze_minutes: int = Field(default=15, ge=1, le=240)
     notes: str | None = None
