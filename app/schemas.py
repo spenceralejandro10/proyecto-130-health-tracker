@@ -27,6 +27,12 @@ class MetricCreate(BaseModel):
         return value.strip()
 
 
+class ProfileUpdate(BaseModel):
+    height_cm: float = Field(gt=100, le=250)
+    age_years: int = Field(ge=18, le=120)
+    sex: Literal["male", "female"]
+
+
 class ActivityCreate(BaseModel):
     started_at: datetime
     activity_type: str
