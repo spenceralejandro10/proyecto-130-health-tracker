@@ -226,10 +226,13 @@ function renderInterpretation(d){
     <p>${escapeHtml(h.explanation)}</p>
   </div>`).join(''):'<p class="plain-note">No hay un cambio corporal adicional que explicar todavía.</p>';
 
-  const context=a.context_findings||[];
-  $('analysisContext').innerHTML=context.length
-    ? `<strong>Contexto del mismo experimento</strong>${context.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}`
-    : '';
+  const connections=a.connections||[];
+  const fallback=a.context_findings||[];
+  $('analysisContext').innerHTML=connections.length
+    ? `<strong>Relaciones calculadas</strong>${connections.map(x=>`<span><b>${escapeHtml(x.label)}:</b> ${escapeHtml(x.explanation)}</span>`).join('')}`
+    : fallback.length
+      ? `<strong>Datos relacionados</strong>${fallback.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}`
+      : '';
 
   $('analysisDecisionNote').textContent=a.decision_note||'';
   $('analysisLimits').innerHTML=`<ul>${(a.limits||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>`;
