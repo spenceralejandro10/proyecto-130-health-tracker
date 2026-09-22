@@ -371,6 +371,91 @@ def _context_state(db: Session, day: date) -> dict[str, Any]:
     }
 
 
+def _connected_findings(
+    current: dict[str, Any],
+    observations: list[dict[str, Any]],
+    energy: dict[str, Any],
+    context: dict[str, Any],
+) -> list[dict[str, str]]:
+    findings: list[dict[str, str]] = []
+    weight = _value(current, "weight_kg")
+    lean = energy.get("lean_mass_est_kg")
+    resting = energy.get("resting_kcal_day")
+    resting_change = energy.get("resting_change_kcal_day")
+
+    if lean is not None and resting is not None:
+        change_text = (
+            f" ({_signed(resting_change, 0)} kcal/día frente a la medición anterior)"
+            if resting_change is not None else ""
+        )
+        findings.append({
+            "code": "composition_to_resting",
+            "label": "Composición corporal → gasto en reposo",
+            "explanation": (
+                f"Masa libre de grasa estimada {_fmt(lean, 1)} kg → "
+                f"TMB estimada {_fmt(resting, 0)} kcal/día{change_text}."
+            ),
+        })
+
+    activity_kcal = energy.get("activity_kcal")
+    activity_minutes = energy.get("activity_minutes")
+    accounted = energy.get("accounted_expenditure_kcal")
+    if weight is not None and activity_kcal is not None:
+        findings.append({
+            "code": "weight_activity_to_expenditure",
+            "label": "Peso + actividad → gasto contabilizado",
+            "explanation": (
+                f"Con {_fmt(weight, 1)} kg y {_fmt(activity_minutes, 0)} min de actividad registrada, "
+                f"la actividad aporta ≈{_fmt(activity_kcal, 0)} kcal; "
+                f"reposo + actividad = ≈{_fmt(accounted, 0)} kcal."
+            ),
+        })
+
+    intake = energy.get("intake_kcal")
+    balance = energy.get("partial_balance_kcal")
+    if intake is not None and accounted is not None and balance is not None:
+        balance_word = "déficit" if balance < 0 else "superávit" if balance > 0 else "balance neutro"
+        findings.append({
+            "code": "intake_expenditure_balance",
+            "label": "Ingesta + gasto → balance parcial",
+            "explanation": (
+                f"Ingesta {_fmt(intake, 0)} kcal − gasto contabilizado {_fmt(accounted, 0)} kcal = "
+                f"{balance_word} de {_fmt(abs(balance), 0)} kcal."
+            ),
+        })
+
+    muscle_obs = next((item for item in observations if item["key"] == "muscle_mass_kg"), None)
+    if muscle_obs and muscle_obs.get("delta") is not None:
+        parts = [_direct_metric_message(muscle_obs)]
+        if context.get("strength_sets") is not None:
+            parts.append(
+                f"Fuerza del día: {context['strength_sets']} series, "
+                f"{_fmt(context.get('strength_volume_kg_reps'), 0)} kg·rep."
+            )
+        if context.get("protein_g") is not None:
+            parts.append(f"Proteína registrada: {_fmt(context['protein_g'], 0)} g.")
+        if len(parts) > 1:
+            findings.append({
+                "code": "muscle_strength_nutrition",
+                "label": "Músculo + fuerza + nutrición",
+                "explanation": " ".join(parts),
+            })
+
+    if context.get("sleep_hours") is not None:
+        parts = [f"Sueño: {_fmt(context['sleep_hours'], 1)} h."]
+        if context.get("resting_hr") is not None:
+            parts.append(f"FC en reposo: {_fmt(context['resting_hr'], 0)} lpm.")
+        if context.get("fatigue_score") is not None:
+            parts.append(f"Fatiga registrada: {context['fatigue_score']}/10.")
+        findings.append({
+            "code": "recovery_state",
+            "label": "Recuperación registrada",
+            "explanation": " ".join(parts),
+        })
+
+    return findings
+
+
 def _confidence(current: dict[str, Any], previous: dict[str, Any], snapshots: list[dict[str, Any]]) -> dict[str, Any]:
     core = ("weight_kg", "body_fat_pct", "muscle_mass_kg", "body_water_pct")
     paired = sum(1 for key in core if _value(current, key) is not None and _value(previous, key) is not None)
@@ -663,6 +748,7 @@ def interpret_body_composition(db: Session) -> dict[str, Any]:
             "context_findings": _context_findings(db),
             "energy": {},
             "context_state": {},
+            "connections": [],
             "limits": [],
             "decision_note": "0 variables comparadas.",
         }
@@ -691,6 +777,7 @@ def interpret_body_composition(db: Session) -> dict[str, Any]:
 
     energy = _energy_state(db, current, previous)
     context_state = _context_state(db, current["date"])
+    connections = _connected_findings(current, observations, energy, context_state)
 
     if previous is None:
         return {
@@ -707,6 +794,7 @@ def interpret_body_composition(db: Session) -> dict[str, Any]:
             "context_findings": _context_findings(db),
             "energy": energy,
             "context_state": context_state,
+            "connections": connections,
             "limits": [],
             "decision_note": f"{len(observations)} valores integrados en el estado inicial.",
         }
@@ -736,6 +824,7 @@ def interpret_body_composition(db: Session) -> dict[str, Any]:
         "context_findings": _context_findings(db),
         "energy": energy,
         "context_state": context_state,
+        "connections": connections,
         "limits": [
             "TMB calculada con masa libre de grasa estimada: 370 + 21,6 × masa libre de grasa (kg).",
             "Calorías de actividad usan el dato del dispositivo cuando existe; si no, se estiman con MET, peso y duración.",
