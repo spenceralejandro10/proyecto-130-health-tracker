@@ -55,3 +55,6 @@ button,input{font:inherit}.hero{background:linear-gradient(135deg,#121c2a 0%,#1d
 @media(max-width:1050px){.overview-grid-three{grid-template-columns:1fr 1fr}.goal-pace-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.workspace-tabs{padding:0 18px;overflow:auto}.workspace-tab{white-space:nowrap}.overview-grid-three{grid-template-columns:1fr}.goal-pace-head{display:block}.goal-pace-number{text-align:left;margin-top:12px}.nutrition-form{grid-template-columns:1fr}.nutrition-form label,.nutrition-form label:first-child,.nutrition-form .primary-btn{grid-column:1}}
 @media(max-width:520px){.goal-pace-grid{grid-template-columns:1fr}}
+
+.profile-form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.profile-form label{display:grid;gap:5px;font-size:.76rem;font-weight:700;color:#556671}.profile-form input,.profile-form select{width:100%;border:1px solid #d7e0e5;background:#fff;border-radius:10px;padding:9px 10px;color:#182631}.profile-form .primary-btn{align-self:end}
+@media(max-width:900px){.profile-form{grid-template-columns:1fr 1fr}}@media(max-width:560px){.profile-form{grid-template-columns:1fr}}
