@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import inspect, select
@@ -205,6 +205,23 @@ def create_nutrition(payload: NutritionCreate, db: Session = Depends(get_db)):
 def list_nutrition(limit: int = Query(100, ge=1, le=1000), db: Session = Depends(get_db)):
     rows = db.scalars(select(NutritionRecord).order_by(NutritionRecord.nutrition_date.desc()).limit(limit)).all()
     return [_columns(x) for x in rows]
+
+
+@router.put("/nutrition/{nutrition_date}")
+def upsert_nutrition(nutrition_date: date, payload: NutritionCreate, db: Session = Depends(get_db)):
+    data = payload.model_dump()
+    data["nutrition_date"] = nutrition_date
+    obj = db.scalar(select(NutritionRecord).where(NutritionRecord.nutrition_date == nutrition_date).limit(1))
+    if obj:
+        before = _columns(obj)
+        for key, value in data.items():
+            setattr(obj, key, value)
+        audit(db, entity_type="nutrition", entity_id=obj.id, action="update", before=before, after=_columns(obj), reason="daily_upsert")
+        db.commit()
+        db.refresh(obj)
+        return _columns(obj)
+    obj = NutritionRecord(**data)
+    return _create(db, obj, "nutrition", reason="daily_upsert")
 
 
 @router.post("/decisions", status_code=201)
