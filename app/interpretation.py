@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .config import settings
-from .models import Activity, MetricRecord, NutritionRecord, SleepRecord, StrengthSet
+from .models import Activity, MetricRecord, NutritionRecord, SleepRecord, StrengthSet, UserProfile
 from .timeutils import utc_naive_to_local_date
 
 
@@ -265,12 +265,24 @@ def _energy_state(
     weight = _value(current, "weight_kg")
     lean = _value(current, "lean_mass_est_kg")
 
-    resting = 370 + 21.6 * lean if lean is not None else None
-    previous_resting = None
-    if previous is not None:
-        prev_lean = _value(previous, "lean_mass_est_kg")
-        if prev_lean is not None:
-            previous_resting = 370 + 21.6 * prev_lean
+    profile = db.scalar(select(UserProfile).order_by(UserProfile.id.asc()).limit(1))
+    resting_method = "katch_mcardle"
+    if profile and weight is not None:
+        sex_constant = 5 if profile.sex == "male" else -161
+        resting = 10 * weight + 6.25 * float(profile.height_cm) - 5 * int(profile.age_years) + sex_constant
+        previous_resting = None
+        if previous is not None:
+            prev_weight = _value(previous, "weight_kg")
+            if prev_weight is not None:
+                previous_resting = 10 * prev_weight + 6.25 * float(profile.height_cm) - 5 * int(profile.age_years) + sex_constant
+        resting_method = "mifflin_st_jeor"
+    else:
+        resting = 370 + 21.6 * lean if lean is not None else None
+        previous_resting = None
+        if previous is not None:
+            prev_lean = _value(previous, "lean_mass_est_kg")
+            if prev_lean is not None:
+                previous_resting = 370 + 21.6 * prev_lean
 
     rows = [
         row
@@ -314,6 +326,10 @@ def _energy_state(
             0,
         ),
         "lean_mass_est_kg": _round(lean),
+        "resting_method": resting_method,
+        "profile_height_cm": _round(float(profile.height_cm), 0) if profile else None,
+        "profile_age_years": int(profile.age_years) if profile else None,
+        "profile_sex": profile.sex if profile else None,
         "activity_minutes": _round(activity_minutes, 0),
         "activity_kcal": _round(activity_kcal, 0),
         "activity_kcal_device": _round(device_kcal, 0) if rows else None,
@@ -890,7 +906,7 @@ def interpret_body_composition(db: Session) -> dict[str, Any]:
         "context_state": context_state,
         "connections": connections,
         "limits": [
-            "TMB calculada con masa libre de grasa estimada: 370 + 21,6 × masa libre de grasa (kg).",
+            "TMB: usa Mifflin-St Jeor cuando el perfil tiene estatura, edad y sexo; si el perfil aún no existe, usa masa libre de grasa estimada.",
             "Calorías de actividad usan el dato del dispositivo cuando existe; si no, se estiman con MET, peso y duración.",
             "El balance mostrado es parcial: ingesta registrada menos TMB y actividad registrada.",
         ],
