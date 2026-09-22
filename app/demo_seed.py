@@ -52,15 +52,48 @@ def seed_demo_data() -> None:
                     notes="Dato simulado para visualizar el producto; no es una medición real."
                 ))
 
-            # Actividad integrada: caminatas suaves frecuentes.
-            walk_min = [45,60,50,70,60,75,55,80,60,65,75,60,90,60][i]
+            # Actividad simulada coherente con la rutina documentada:
+            # caminata de mañana + fuerza (lunes-sábado) + sesión funcional corta
+            # y, algunos días, caminata suave de noche.
+            morning_walk = [50,60,55,60,60,65,40,60,55,60,60,60,70,60][i]
             db.add(Activity(
-                started_at=_local_dt(d, 8, 0), activity_type="walk", duration_min=walk_min,
-                speed_kmh=4.5, device_calories=round(walk_min*5.7,1), perceived_exertion=3,
+                started_at=_local_dt(d, 8, 0), activity_type="caminata_manana", duration_min=morning_walk,
+                speed_kmh=4.5, device_calories=round(morning_walk*5.5,1), perceived_exertion=3,
                 pain_score=0, integrated=True, integration_context="conversación/estudio",
-                source="SIMULACIÓN", source_event_id=f"demo:walk:{d.isoformat()}",
-                notes="Actividad simulada para demostración."
+                source="SIMULACIÓN", source_event_id=f"demo:walk-am:{d.isoformat()}",
+                notes="Caminata matutina simulada."
             ))
+
+            weekday = d.weekday()  # lunes=0
+            if weekday < 6:
+                strength_minutes = [70,75,75,70,75,80][weekday]
+                db.add(Activity(
+                    started_at=_local_dt(d, 9, 15), activity_type="fuerza_gimnasio", duration_min=strength_minutes,
+                    perceived_exertion=6, pain_score=0, integrated=False,
+                    integration_context=None, source="SIMULACIÓN",
+                    source_event_id=f"demo:gym:{d.isoformat()}",
+                    notes="Sesión de fuerza simulada según la división semanal."
+                ))
+
+                # No todos los días se completa el bloque funcional: así la adherencia es visible.
+                if i not in {3, 8, 12}:
+                    functional_minutes = 20 if i % 2 == 0 else 25
+                    db.add(Activity(
+                        started_at=_local_dt(d, 16, 30), activity_type="funcional_tarde", duration_min=functional_minutes,
+                        perceived_exertion=5, pain_score=0, integrated=False,
+                        source="SIMULACIÓN", source_event_id=f"demo:functional:{d.isoformat()}",
+                        notes="Sesión funcional simulada."
+                    ))
+
+                if i in {1,2,4,5,7,9,10,11,13}:
+                    evening_walk = 30 if i % 3 else 40
+                    db.add(Activity(
+                        started_at=_local_dt(d, 19, 30), activity_type="caminata_noche", duration_min=evening_walk,
+                        speed_kmh=4.3, device_calories=round(evening_walk*5.2,1), perceived_exertion=2,
+                        pain_score=0, integrated=True, integration_context="contenido/conversación",
+                        source="SIMULACIÓN", source_event_id=f"demo:walk-pm:{d.isoformat()}",
+                        notes="Caminata nocturna simulada."
+                    ))
 
             # Sueño: refleja el riesgo conocido de algunas noches cortas sin convertirlo en diagnóstico.
             sleep_hours=[6.4,6.8,7.1,5.9,7.0,6.6,7.2,5.4,6.2,7.0,6.7,7.3,6.5,6.9][i]
