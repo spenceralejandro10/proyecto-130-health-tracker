@@ -27,6 +27,30 @@
       <article class="card"><span>Próximo recordatorio</span><strong id="nextReminder">—</strong><small id="nextReminderTime">Sin recordatorios</small></article>
     </section>
 
+
+    <section class="panel composition-panel">
+      <div class="panel-head"><h2>Composición estimada</h2><small>Referencia clínica: pendiente de configuración</small></div>
+      <div class="grid composition-grid">
+        <article class="mini"><span>Grasa corporal</span><strong id="bodyFat">—</strong><small id="bodyFatTrend">Sin datos</small></article>
+        <article class="mini"><span>Masa muscular</span><strong id="muscleMass">—</strong><small id="muscleTrend">Sin datos</small></article>
+        <article class="mini"><span>Agua corporal</span><strong id="bodyWater">—</strong><small id="waterTrend">Sin datos</small></article>
+        <article class="mini"><span>Grasa visceral</span><strong id="visceralFat">—</strong><small id="visceralTrend">Sin datos</small></article>
+      </div>
+    </section>
+
+    <section class="panel trend-panel">
+      <div class="panel-head">
+        <h2>Tendencia de peso</h2>
+        <div class="tabs compact">
+          <button class="trend-window active" data-days="7">7d</button>
+          <button class="trend-window" data-days="14">14d</button>
+          <button class="trend-window" data-days="30">30d</button>
+          <button class="trend-window" data-days="130">130d</button>
+        </div>
+      </div>
+      <div id="weightChart" class="chart"><span>Datos insuficientes.</span></div>
+    </section>
+
     <section class="two-col">
       <article class="panel">
         <div class="panel-head"><h2>Alertas y revisión</h2><span class="pill" id="quality">—</span></div>
