@@ -5,7 +5,7 @@ from app.main import app
 client = TestClient(app)
 
 
-def _metric(day: str, key: str, value: float, unit: str, origin: str = "device_estimated") -> None:
+def _metric(day: str, key: str, value: float, unit: str, origin: str = "device_estimated", tag: str = "main") -> None:
     response = client.post(
         "/api/metrics",
         json={
@@ -16,7 +16,7 @@ def _metric(day: str, key: str, value: float, unit: str, origin: str = "device_e
             "source": "BIA test fixture",
             "origin": origin,
             "validation_status": "confirmed" if key == "weight_kg" else "estimated",
-            "source_event_id": f"interpretation-{day}-{key}-{value}",
+            "source_event_id": f"interpretation-{tag}-{day}-{key}-{value}",
         },
     )
     assert response.status_code == 201
@@ -68,12 +68,12 @@ def test_interpretation_never_calls_device_estimates_direct_measurements():
 
 
 def test_period_analysis_returns_processed_metric_changes():
-    _metric("2026-09-21", "weight_kg", 118.0, "kg", "measured")
-    _metric("2026-09-21", "body_fat_pct", 32.0, "%")
-    _metric("2026-09-21", "body_water_pct", 48.0, "%")
-    _metric("2026-09-22", "weight_kg", 117.4, "kg", "measured")
-    _metric("2026-09-22", "body_fat_pct", 31.6, "%")
-    _metric("2026-09-22", "body_water_pct", 48.6, "%")
+    _metric("2026-09-21", "weight_kg", 118.0, "kg", "measured", "period")
+    _metric("2026-09-21", "body_fat_pct", 32.0, "%", tag="period")
+    _metric("2026-09-21", "body_water_pct", 48.0, "%", tag="period")
+    _metric("2026-09-22", "weight_kg", 117.4, "kg", "measured", "period")
+    _metric("2026-09-22", "body_fat_pct", 31.6, "%", tag="period")
+    _metric("2026-09-22", "body_water_pct", 48.6, "%", tag="period")
 
     response = client.get("/api/project-series?days=7")
     assert response.status_code == 200
