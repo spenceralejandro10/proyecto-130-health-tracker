@@ -205,10 +205,11 @@ def _direct_metric_message(obs: dict[str, Any]) -> str:
         )
 
     verb = "subió" if delta > 0 else "bajó"
-    return (
-        f"{label} {verb} {_fmt(abs(delta))} {delta_unit}: "
-        f"{previous} {unit} → {current} {unit}."
-    )
+    if obs["key"] in {"body_fat_pct", "body_water_pct"}:
+        return f"{label} {verb}: {previous}% → {current}%."
+    if obs["key"] == "visceral_fat_index":
+        return f"{label} {verb}: {previous} → {current}."
+    return f"{label} {verb} {_fmt(abs(delta))} {delta_unit}: {previous} {unit} → {current} {unit}."
 
 
 def _metric_messages(observations: list[dict[str, Any]]) -> dict[str, str]:
@@ -241,8 +242,9 @@ def _energy_state(
     db: Session,
     current: dict[str, Any],
     previous: dict[str, Any] | None,
+    day_override: date | None = None,
 ) -> dict[str, Any]:
-    day = current["date"]
+    day = day_override or current["date"]
     weight = _value(current, "weight_kg")
     lean = _value(current, "lean_mass_est_kg")
 
@@ -549,7 +551,10 @@ def _integrated_findings(current: dict[str, Any], previous: dict[str, Any]) -> l
             "code": "fat_pct_change",
             "label": f"La grasa corporal {'subió' if fat_pct > 0 else 'bajó'}",
             "confidence": "media",
-            "explanation": f"Grasa corporal {_signed(fat_pct)} puntos.",
+            "explanation": (
+                f"Grasa corporal: {_fmt(_value(previous, 'body_fat_pct'))}% → "
+                f"{_fmt(_value(current, 'body_fat_pct'))}%."
+            ),
         })
 
     if water_pct is not None and abs(water_pct) > GUARD_BANDS["body_water_pct"]:
@@ -557,7 +562,10 @@ def _integrated_findings(current: dict[str, Any], previous: dict[str, Any]) -> l
             "code": "water_pct_change",
             "label": f"El agua corporal {'subió' if water_pct > 0 else 'bajó'}",
             "confidence": "media",
-            "explanation": f"Agua corporal {_signed(water_pct)} puntos.",
+            "explanation": (
+                f"Agua corporal: {_fmt(_value(previous, 'body_water_pct'))}% → "
+                f"{_fmt(_value(current, 'body_water_pct'))}%."
+            ),
         })
 
     if muscle is not None and abs(muscle) > GUARD_BANDS["muscle_mass_kg"]:
@@ -573,7 +581,10 @@ def _integrated_findings(current: dict[str, Any], previous: dict[str, Any]) -> l
             "code": "visceral_change",
             "label": f"La grasa visceral estimada {'subió' if visceral > 0 else 'bajó'}",
             "confidence": "media",
-            "explanation": f"Índice de grasa visceral {_signed(visceral)} puntos.",
+            "explanation": (
+                f"Grasa visceral: {_fmt(_value(previous, 'visceral_fat_index'))} → "
+                f"{_fmt(_value(current, 'visceral_fat_index'))}."
+            ),
         })
 
     return findings
@@ -642,11 +653,16 @@ def _series_summary(key: str, points: list[tuple[date, float]], days: int) -> di
         headline = f"{label}: {_fmt(last)} {unit}. Un registro en el período."
     else:
         verb = "subió" if delta_period > 0 else "bajó" if delta_period < 0 else "no cambió"
-        amount = "" if delta_period == 0 else f" {_fmt(abs(delta_period))} {delta_unit}"
-        headline = (
-            f"{label} {verb}{amount}: {_fmt(first)} {unit} → {_fmt(last)} {unit}. "
-            f"Último cambio: {_signed(delta_latest)} {delta_unit}."
-        )
+        if key in {"body_fat_pct", "body_water_pct"}:
+            headline = f"{label} {verb}: {_fmt(first)}% → {_fmt(last)}%."
+        elif key == "visceral_fat_index":
+            headline = f"{label} {verb}: {_fmt(first)} → {_fmt(last)}."
+        else:
+            amount = "" if delta_period == 0 else f" {_fmt(abs(delta_period))} {delta_unit}"
+            headline = (
+                f"{label} {verb}{amount}: {_fmt(first)} {unit} → {_fmt(last)} {unit}. "
+                f"Último cambio: {_signed(delta_latest)} {delta_unit}."
+            )
 
     return {
         "key": key,
@@ -667,6 +683,37 @@ def _series_summary(key: str, points: list[tuple[date, float]], days: int) -> di
         "direction_latest": _direction(delta_latest, GUARD_BANDS.get(key, 0.0)),
         "headline": headline,
     }
+
+
+def energy_history(db: Session, days: int) -> list[dict[str, Any]]:
+    today = datetime.now(settings.timezone).date()
+    start = today - timedelta(days=days - 1)
+    snapshots = [item for item in _snapshots(db) if "weight_kg" in item["values"]]
+    if not snapshots:
+        return []
+
+    rows: list[dict[str, Any]] = []
+    previous_body: dict[str, Any] | None = None
+    for offset in range(days):
+        day = start + timedelta(days=offset)
+        available = [item for item in snapshots if item["date"] <= day]
+        if not available:
+            continue
+        body = available[-1]
+        body_index = snapshots.index(body)
+        previous_body = snapshots[body_index - 1] if body_index > 0 else None
+        state = _energy_state(db, body, previous_body, day_override=day)
+        rows.append({
+            "date": day.isoformat(),
+            "weight_kg": _round(_value(body, "weight_kg")),
+            "resting_kcal": state.get("resting_kcal_day"),
+            "activity_kcal": state.get("activity_kcal"),
+            "activity_minutes": state.get("activity_minutes"),
+            "accounted_expenditure_kcal": state.get("accounted_expenditure_kcal"),
+            "intake_kcal": state.get("intake_kcal"),
+            "balance_kcal": state.get("partial_balance_kcal"),
+        })
+    return rows
 
 
 def trend_analysis(db: Session, days: int) -> dict[str, Any]:
