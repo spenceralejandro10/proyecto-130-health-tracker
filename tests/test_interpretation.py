@@ -172,3 +172,21 @@ def test_nutrition_day_can_be_updated_and_recalculates_energy_series():
     series = client.get("/api/project-series?days=14")
     assert series.status_code == 200
     assert "energy_history" in series.json()
+
+
+def test_profile_switches_resting_metabolism_to_mifflin():
+    profile = client.put(
+        "/api/profile",
+        json={"height_cm": 180, "age_years": 40, "sex": "male"},
+    )
+    assert profile.status_code == 200
+
+    dashboard = client.get("/api/dashboard")
+    assert dashboard.status_code == 200
+    energy = dashboard.json()["interpretation"]["energy"]
+
+    if energy.get("resting_kcal_day") is not None:
+        assert energy["resting_method"] == "mifflin_st_jeor"
+        assert energy["profile_height_cm"] == 180
+        assert energy["profile_age_years"] == 40
+        assert energy["profile_sex"] == "male"
