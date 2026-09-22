@@ -96,41 +96,120 @@ async function submit(path, payload){
     await api(path,{method:'POST',body:JSON.stringify(payload)});
     $('formStatus').textContent='Guardado y auditado.';
     await refreshDashboard();
-    const active=document.querySelector('.trend-window.active'); if(active) await loadWeightTrend(Number(active.dataset.days));
+    const active=document.querySelector('.trend-window.active'); if(active) await loadProjectChart(Number(active.dataset.days));
   }catch(e){ $('formStatus').textContent=`Error: ${e.message}`; }
 }
 
-async function loadWeightTrend(days=7){
-  try{
-    const data=await api(`/api/trends/weight_kg?days=${days}`);
-    renderChart(data.points || []);
-  }catch(e){ $('weightChart').innerHTML='<span>No se pudo cargar la tendencia.</span>'; }
+const SERIES = [
+  {key:'weight_kg', label:'Peso', unit:'kg', desired:'down'},
+  {key:'body_fat_pct', label:'Grasa corporal', unit:'%', desired:'down'},
+  {key:'muscle_mass_kg', label:'Masa muscular', unit:'kg', desired:'stable'},
+  {key:'body_water_pct', label:'Agua corporal', unit:'%', desired:'stable'},
+  {key:'visceral_fat_index', label:'Grasa visceral', unit:'índice', desired:'down'},
+  {key:'sleep_hours', label:'Sueño', unit:'h', desired:'stable'},
+  {key:'activity_minutes', label:'Actividad', unit:'min', desired:'context'}
+];
+
+function dateKey(v){ return String(v).slice(0,10); }
+function statusWord(delta, desired){
+  if (Math.abs(delta) < 0.25) return 'estable';
+  if (desired === 'down') return delta < 0 ? 'mejorando' : 'subiendo';
+  if (desired === 'stable') return Math.abs(delta) <= 2 ? 'estable' : 'cambió';
+  return delta > 0 ? 'más' : 'menos';
+}
+function actualText(v, unit){
+  if(v == null || Number.isNaN(Number(v))) return 'sin dato';
+  const n=Number(v);
+  return `${n.toFixed(unit==='min'||unit==='índice'?0:1)} ${unit}`;
+}
+function metricPoints(data,key){
+  if(key==='sleep_hours') return Object.entries(data.sleep_hours||{}).map(([d,v])=>({date:d,value:Number(v)}));
+  if(key==='activity_minutes') return Object.entries(data.activity_minutes||{}).map(([d,v])=>({date:d,value:Number(v)}));
+  return (data.metrics?.[key]||[]).map(p=>({date:dateKey(p.captured_at),value:Number(p.value)}));
+}
+function normalize(points){
+  if(!points.length) return [];
+  const base=points[0].value || 1;
+  return points.map(p=>({...p,index:(p.value/base)*100}));
 }
 
-function renderChart(points){
-  const box=$('weightChart');
-  if(points.length < 2){ box.innerHTML='<span>Se necesitan al menos 2 mediciones confirmadas.</span>'; return; }
-  const values=points.map(p=>Number(p.value));
-  const min=Math.min(...values), max=Math.max(...values), span=Math.max(max-min,0.5);
-  const w=800,h=160,pad=18;
-  const coords=points.map((p,i)=>{
-    const x=pad+(i/(points.length-1))*(w-pad*2);
-    const y=pad+((max-Number(p.value))/span)*(h-pad*2);
-    return [x,y];
+async function loadProjectChart(days=14){
+  try{
+    const data=await api(`/api/project-series?days=${days}`);
+    renderProjectChart(data);
+  }catch(e){
+    $('projectChart').innerHTML=`<span>No se pudo cargar el mapa del proyecto: ${e.message}</span>`;
+  }
+}
+
+function renderProjectChart(data){
+  const box=$('projectChart');
+  const all=SERIES.map(meta=>({meta,points:normalize(metricPoints(data,meta.key))})).filter(x=>x.points.length);
+  if(!all.length){ box.innerHTML='<span>Aún no hay datos suficientes.</span>'; return; }
+
+  const dates=[...new Set(all.flatMap(s=>s.points.map(p=>p.date)))].sort();
+  if(dates.length<2){ box.innerHTML='<span>Se necesitan al menos dos días para comparar.</span>'; return; }
+  const w=1100,h=360,left=54,right=28,top=28,bottom=48;
+  const indexVals=all.flatMap(s=>s.points.map(p=>p.index));
+  let min=Math.min(...indexVals,96), max=Math.max(...indexVals,104);
+  const margin=Math.max((max-min)*0.18,1.2); min-=margin; max+=margin;
+  const x=d=>left+(dates.indexOf(d)/(dates.length-1))*(w-left-right);
+  const y=v=>top+((max-v)/(max-min))*(h-top-bottom);
+  const palette=['#1565c0','#c62828','#2e7d32','#00838f','#6a1b9a','#ef6c00','#455a64'];
+
+  let svg=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Mapa general de evolución del Proyecto 130">`;
+  [0,.25,.5,.75,1].forEach(t=>{
+    const yy=top+t*(h-top-bottom); const val=max-t*(max-min);
+    svg+=`<line class="gridline" x1="${left}" y1="${yy}" x2="${w-right}" y2="${yy}"></line><text class="axis-label" x="${left-8}" y="${yy+4}" text-anchor="end">${val.toFixed(1)}</text>`;
   });
-  const path=coords.map((c,i)=>`${i?'L':'M'} ${c[0].toFixed(1)} ${c[1].toFixed(1)}`).join(' ');
-  const dots=coords.map(c=>`<circle class="dot" cx="${c[0]}" cy="${c[1]}" r="3"></circle>`).join('');
-  box.innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Tendencia de peso"><line class="axis" x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}"></line><path class="line" d="${path}"></path>${dots}</svg>`;
+  const baseY=y(100);
+  svg+=`<line class="baseline" x1="${left}" y1="${baseY}" x2="${w-right}" y2="${baseY}"></line><text class="baseline-label" x="${w-right}" y="${baseY-6}" text-anchor="end">Punto de partida = 100</text>`;
+
+  all.forEach((series,i)=>{
+    const pts=series.points;
+    const path=pts.map((p,j)=>`${j?'L':'M'} ${x(p.date).toFixed(1)} ${y(p.index).toFixed(1)}`).join(' ');
+    svg+=`<path class="series-line" data-series="${series.meta.key}" d="${path}" style="stroke:${palette[i%palette.length]}"></path>`;
+    pts.forEach(p=>{
+      svg+=`<circle class="series-dot" data-series="${series.meta.key}" cx="${x(p.date)}" cy="${y(p.index)}" r="4" style="fill:${palette[i%palette.length]}"><title>${series.meta.label}: ${actualText(p.value,series.meta.unit)} · ${p.date}</title></circle>`;
+    });
+  });
+  const labelDates=[dates[0],dates[Math.floor((dates.length-1)/2)],dates[dates.length-1]];
+  labelDates.forEach(d=>svg+=`<text class="date-label" x="${x(d)}" y="${h-15}" text-anchor="middle">${new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short'})}</text>`);
+  svg+='</svg>';
+  box.innerHTML=svg;
+
+  const summaries=all.map(({meta,points})=>{
+    const first=points[0],last=points[points.length-1],delta=last.index-first.index;
+    return {meta,first,last,delta,color:palette[all.findIndex(x=>x.meta.key===meta.key)%palette.length]};
+  });
+  $('projectLegend').innerHTML=summaries.map(s=>`<button class="legend-item" data-series="${s.meta.key}"><i style="background:${s.color}"></i><span>${s.meta.label}</span><strong>${actualText(s.last.value,s.meta.unit)}</strong></button>`).join('');
+
+  const weight=summaries.find(s=>s.meta.key==='weight_kg');
+  const fat=summaries.find(s=>s.meta.key==='body_fat_pct');
+  const muscle=summaries.find(s=>s.meta.key==='muscle_mass_kg');
+  const sleep=summaries.find(s=>s.meta.key==='sleep_hours');
+  const messages=[];
+  if(weight) messages.push(`Peso: ${actualText(weight.first.value,'kg')} → ${actualText(weight.last.value,'kg')} (${(weight.last.value-weight.first.value).toFixed(1)} kg).`);
+  if(fat) messages.push(`Grasa estimada: ${actualText(fat.first.value,'%')} → ${actualText(fat.last.value,'%')}.`);
+  if(muscle) messages.push(`Músculo estimado: ${actualText(muscle.last.value,'kg')}, ${statusWord(muscle.delta,'stable')}.`);
+  if(sleep) messages.push(`Sueño reciente: ${actualText(sleep.last.value,'h')}.`);
+  $('projectSummary').innerHTML=messages.map(m=>`<span>${m}</span>`).join('');
+
+  document.querySelectorAll('.legend-item').forEach(btn=>btn.addEventListener('click',()=>{
+    const key=btn.dataset.series;
+    const off=btn.classList.toggle('muted');
+    document.querySelectorAll(`[data-series="${key}"]`).forEach(el=>{ if(el!==btn) el.classList.toggle('hidden-series',off); });
+  }));
 }
 
 document.querySelectorAll('.trend-window').forEach(btn=>btn.addEventListener('click',()=>{
   document.querySelectorAll('.trend-window').forEach(x=>x.classList.remove('active'));
   btn.classList.add('active');
-  loadWeightTrend(Number(btn.dataset.days));
+  loadProjectChart(Number(btn.dataset.days));
 }));
 
 const sleepDate = $('sleepForm').querySelector('[name=sleep_date]');
 sleepDate.value = new Date().toISOString().slice(0,10);
 refreshDashboard();
-loadWeightTrend(7);
+loadProjectChart(14);
 setInterval(refreshDashboard, 60000);
