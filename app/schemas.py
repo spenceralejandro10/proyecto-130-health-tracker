@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -55,6 +56,7 @@ class StrengthSetCreate(BaseModel):
     rpe: int | None = Field(default=None, ge=1, le=10)
     pain_score: int | None = Field(default=None, ge=0, le=10)
     notes: str | None = None
+    source_event_id: str | None = None
 
 
 class SleepCreate(BaseModel):
@@ -107,6 +109,14 @@ class ReminderCreate(BaseModel):
     notes: str | None = None
 
 
+class ReminderUpdate(BaseModel):
+    title: str | None = None
+    time_local: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    active: bool | None = None
+    snooze_minutes: int | None = Field(default=None, ge=1, le=240)
+    notes: str | None = None
+
+
 class ReminderEventCreate(BaseModel):
     action: ReminderAction
 
@@ -132,3 +142,4 @@ class DashboardResponse(BaseModel):
     operational_message: str
     alerts: list[str]
     data_quality: str
+    composition: dict
