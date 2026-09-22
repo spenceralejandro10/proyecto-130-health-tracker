@@ -41,6 +41,7 @@ function signed(v, digits=1, suffix=''){ if(v==null) return '—'; const n=Numbe
 function dateKey(v){ return String(v).slice(0,10); }
 function todayKey(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 function fmtDate(d){ return new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short'}); }
+function escapeHtml(value){ return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 
 function metricPoints(series, key){
   if(key==='sleep_hours') return Object.entries(series.sleep_hours||{}).map(([date,value])=>({date,value:Number(value)})).sort((a,b)=>a.date.localeCompare(b.date));
@@ -127,7 +128,45 @@ function renderResearchChart(series){
   $('researchSummary').innerHTML=summaries.join('');
 }
 
-function renderComposition(series){
+function renderInterpretation(d){
+  const a=d.interpretation;
+  if(!a) return;
+  const confidence=a.confidence?.level||'baja';
+  $('analysisConfidence').textContent=`Confianza ${confidence}`;
+  $('analysisHeadline').textContent=a.headline||'Sin interpretación disponible.';
+  $('analysisSummary').textContent=a.summary||'';
+
+  const kindLabels={
+    observado:'Dato observado',
+    estimado_por_dispositivo:'Estimación de báscula',
+    derivado:'Cálculo derivado'
+  };
+  const observations=a.observations||[];
+  $('analysisObservations').innerHTML=observations.length?observations.map(o=>{
+    const delta=o.delta==null?'Sin comparación':`Cambio ${signed(o.delta,2,' '+o.unit)}`;
+    return `<div class="analysis-observation">
+      <span>${escapeHtml(o.label)}</span>
+      <strong>${escapeHtml(num(o.current,2))} ${escapeHtml(o.unit)}</strong>
+      <small>${escapeHtml(delta)}</small>
+      <small class="analysis-kind">${escapeHtml(kindLabels[o.kind]||o.kind)}</small>
+    </div>`;
+  }).join(''):'<p class="plain-note">Todavía no hay suficientes variables comparables.</p>';
+
+  const hypotheses=a.hypotheses||[];
+  $('analysisHypotheses').innerHTML=hypotheses.length?hypotheses.map(h=>`<div class="analysis-hypothesis">
+    <div class="analysis-hypothesis-head">
+      <strong>${escapeHtml(h.label)}</strong>
+      <span class="analysis-confidence">Confianza ${escapeHtml(h.confidence)}</span>
+    </div>
+    <p>${escapeHtml(h.explanation)}</p>
+  </div>`).join(''):'<p class="plain-note">El motor todavía no genera hipótesis porque falta una segunda medición comparable.</p>';
+
+  $('analysisDecisionNote').textContent=a.decision_note||'';
+  $('analysisLimits').innerHTML=`<ul>${(a.limits||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>`;
+}
+
+function renderComposition(series, interpretation=null){
+  const interpretationMessages=interpretation?.metric_messages||{};
   const cfg=[
     ['body_fat_pct','bodyFat','bodyFatStart','bodyFatChange','bodyFatChart','bodyFatText','%','Si baja de forma sostenida mientras la fuerza se mantiene, la señal es favorable.'],
     ['muscle_mass_kg','muscleMass','muscleStart','muscleChange','muscleChart','muscleText','kg','Cambios pequeños pueden ser ruido de la báscula; se contrasta con fuerza y tendencia.'],
@@ -141,7 +180,7 @@ function renderComposition(series){
     $(currentId).textContent=`${num(last)} ${unit}`;
     $(startId).textContent=`${num(first)} ${unit}`;
     $(changeId).textContent=signed(diff,1,unit==='%'?' puntos':' '+unit);
-    $(textId).textContent=text;
+    $(textId).textContent=interpretationMessages[key]||text;
     sparkline($(chartId),p);
   });
 }
@@ -175,6 +214,10 @@ function renderWeight(d, series){
     if(d.current_weight_kg<d.moving_avg_7d_kg) $('weightExplanation').textContent='El peso de hoy está por debajo del promedio de los últimos 7 días. El promedio es mayor porque incluye días anteriores con más peso; eso es coherente con una bajada reciente.';
     else if(d.current_weight_kg>d.moving_avg_7d_kg) $('weightExplanation').textContent='El peso de hoy está por encima del promedio de 7 días. Se observa la tendencia antes de concluir si es un cambio real.';
     else $('weightExplanation').textContent='El peso de hoy coincide aproximadamente con el promedio reciente.';
+  }
+
+  if(d.interpretation?.metric_messages?.weight_kg){
+    $('weightExplanation').textContent=d.interpretation.metric_messages.weight_kg;
   }
 
   const p=metricPoints(series,'weight_kg');
@@ -261,8 +304,9 @@ async function load(days=14){
     renderStudy(dashboard);
     renderActivity(activities,series);
     renderSleep(series);
-    renderComposition(series);
+    renderComposition(series,dashboard.interpretation);
     renderResearchChart(series);
+    renderInterpretation(dashboard);
     renderAlerts(dashboard);
     $('sync').textContent=`Actualizado ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
   }catch(e){
