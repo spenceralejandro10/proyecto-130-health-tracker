@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import inspect, select
@@ -29,6 +29,7 @@ from ..schemas import (
     NutritionCreate,
     ReminderCreate,
     ReminderEventCreate,
+    ReminderUpdate,
     SleepCreate,
     StrengthSetCreate,
 )
@@ -58,7 +59,7 @@ def _create(db: Session, obj, entity_type: str, reason: str = "create"):
 
 @router.get("/health")
 def health():
-    return {"status": "ok", "time": datetime.utcnow().isoformat()}
+    return {"status": "ok", "time": datetime.now(UTC).isoformat()}
 
 
 @router.post("/metrics", status_code=201)
@@ -110,6 +111,12 @@ def create_strength(payload: StrengthSetCreate, db: Session = Depends(get_db)):
     return _create(db, obj, "strength_set")
 
 
+@router.get("/strength")
+def list_strength(limit: int = Query(100, ge=1, le=1000), db: Session = Depends(get_db)):
+    rows = db.scalars(select(StrengthSet).order_by(StrengthSet.performed_at.desc()).limit(limit)).all()
+    return [_columns(x) for x in rows]
+
+
 @router.get("/strength/last/{exercise_name}")
 def last_strength(exercise_name: str, db: Session = Depends(get_db)):
     obj = db.scalar(
@@ -135,16 +142,34 @@ def create_sleep(payload: SleepCreate, db: Session = Depends(get_db)):
     return _create(db, obj, "sleep")
 
 
+@router.get("/sleep")
+def list_sleep(limit: int = Query(100, ge=1, le=1000), db: Session = Depends(get_db)):
+    rows = db.scalars(select(SleepRecord).order_by(SleepRecord.sleep_date.desc()).limit(limit)).all()
+    return [_columns(x) for x in rows]
+
+
 @router.post("/nutrition", status_code=201)
 def create_nutrition(payload: NutritionCreate, db: Session = Depends(get_db)):
     obj = NutritionRecord(**payload.model_dump())
     return _create(db, obj, "nutrition")
 
 
+@router.get("/nutrition")
+def list_nutrition(limit: int = Query(100, ge=1, le=1000), db: Session = Depends(get_db)):
+    rows = db.scalars(select(NutritionRecord).order_by(NutritionRecord.nutrition_date.desc()).limit(limit)).all()
+    return [_columns(x) for x in rows]
+
+
 @router.post("/decisions", status_code=201)
 def create_decision(payload: DecisionCreate, db: Session = Depends(get_db)):
     obj = Decision(**payload.model_dump())
     return _create(db, obj, "decision")
+
+
+@router.get("/decisions")
+def list_decisions(limit: int = Query(100, ge=1, le=1000), db: Session = Depends(get_db)):
+    rows = db.scalars(select(Decision).order_by(Decision.created_at.desc()).limit(limit)).all()
+    return [_columns(x) for x in rows]
 
 
 @router.patch("/decisions/{decision_id}/result")
@@ -171,6 +196,20 @@ def list_reminders(db: Session = Depends(get_db)):
     return [_columns(x) for x in db.scalars(select(Reminder).order_by(Reminder.time_local)).all()]
 
 
+@router.patch("/reminders/{reminder_id}")
+def update_reminder(reminder_id: int, payload: ReminderUpdate, db: Session = Depends(get_db)):
+    obj = db.get(Reminder, reminder_id)
+    if not obj:
+        raise HTTPException(status_code=404, detail="Recordatorio no encontrado")
+    before = _columns(obj)
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(obj, key, value)
+    audit(db, entity_type="reminder", entity_id=obj.id, action="update", before=before, after=_columns(obj))
+    db.commit()
+    db.refresh(obj)
+    return _columns(obj)
+
+
 @router.get("/reminders/due")
 def get_due_reminders(db: Session = Depends(get_db)):
     return due_reminders(db)
@@ -183,7 +222,7 @@ def reminder_event(reminder_id: int, payload: ReminderEventCreate, db: Session =
         raise HTTPException(status_code=404, detail="Recordatorio no encontrado")
     snoozed_until = None
     if payload.action == "snooze":
-        snoozed_until = datetime.utcnow() + timedelta(minutes=reminder.snooze_minutes)
+        snoozed_until = datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=reminder.snooze_minutes)
     obj = ReminderEvent(reminder_id=reminder_id, action=payload.action.value, snoozed_until=snoozed_until)
     return _create(db, obj, "reminder_event")
 
@@ -216,7 +255,7 @@ def export_all(db: Session = Depends(get_db)):
     for name, model in table_map.items():
         data[name] = [_columns(x) for x in db.scalars(select(model)).all()]
     return {
-        "exported_at": datetime.utcnow().isoformat(),
+        "exported_at": datetime.now(UTC).isoformat(),
         "schema_version": "v1",
         "data": data,
     }
