@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Estudio 130</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20260922-4">
+  <link rel="stylesheet" href="/static/styles.css?v=20260922-5">
 </head>
 <body>
   <header class="hero">
@@ -218,6 +218,30 @@
         <p class="energy-summary" id="energySummary">—</p>
       </section>
 
+      <section class="panel profile-panel">
+        <div class="panel-head">
+          <div>
+            <p class="kicker dark">DATOS BASE DEL GASTO</p>
+            <h2>Perfil metabólico</h2>
+            <p class="plain-note">Se guarda una vez. El peso se toma automáticamente de la báscula y cambia el cálculo cada vez que cambia tu peso.</p>
+          </div>
+          <span id="metabolismMethod" class="status-pill">—</span>
+        </div>
+        <form id="profileForm" class="profile-form">
+          <label>Estatura (cm)<input id="profileHeight" type="number" min="100" max="250" step="0.1" required></label>
+          <label>Edad<input id="profileAge" type="number" min="18" max="120" step="1" required></label>
+          <label>Sexo para la fórmula
+            <select id="profileSex" required>
+              <option value="">Seleccionar</option>
+              <option value="male">Hombre</option>
+              <option value="female">Mujer</option>
+            </select>
+          </label>
+          <button type="submit" class="primary-btn">Guardar perfil</button>
+        </form>
+        <p id="profileStatus" class="plain-note"></p>
+      </section>
+
       <section class="panel">
         <div class="panel-head">
           <div>
@@ -270,6 +294,6 @@
     </div>
   </main>
 
-  <script src="/static/app.js?v=20260922-4"></script>
+  <script src="/static/app.js?v=20260922-5"></script>
 </body>
 </html>
