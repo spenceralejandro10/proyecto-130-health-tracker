@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .config import settings
+from .interpretation import interpret_body_composition
 from .models import Activity, MetricRecord, Reminder, ReminderEvent, SleepRecord
 from .timeutils import local_day_bounds_utc, utc_naive_to_local_date
 
@@ -234,4 +235,5 @@ def dashboard(db: Session) -> dict:
         "alerts": alerts,
         "data_quality": quality,
         "composition": composition_summary(db),
+        "interpretation": interpret_body_composition(db),
     }
