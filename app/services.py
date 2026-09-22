@@ -23,6 +23,7 @@ def _metric_values(db: Session, metric_key: str, since: datetime | None = None) 
     )
     if since:
         stmt = stmt.where(MetricRecord.captured_at >= since)
+    stmt = stmt.where(MetricRecord.captured_at <= datetime.now(UTC).replace(tzinfo=None))
     stmt = stmt.order_by(MetricRecord.captured_at.asc())
     return list(db.scalars(stmt).all())
 
