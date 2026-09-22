@@ -86,3 +86,31 @@ def test_export_contains_audit():
     body = export.json()
     assert body["schema_version"] == "v1"
     assert "audit" in body["data"]
+
+
+def test_same_evidence_can_create_multiple_metrics():
+    base = {
+        "captured_at": "2026-09-23T06:10:00",
+        "unit": "%",
+        "source": "Xiaomi Mi Body Composition Scale 2",
+        "origin": "device_estimated",
+        "validation_status": "estimated",
+        "source_event_id": "xiaomi-summary-2026-09-23",
+    }
+    fat = {**base, "metric_key": "body_fat_pct", "value": 32.1}
+    water = {**base, "metric_key": "body_water_pct", "value": 48.2}
+    assert client.post("/api/metrics", json=fat).status_code == 201
+    assert client.post("/api/metrics", json=water).status_code == 201
+    dash = client.get("/api/dashboard").json()
+    assert dash["composition"]["body_fat_pct"]["value"] == 32.1
+    assert dash["composition"]["body_water_pct"]["value"] == 48.2
+
+
+def test_reminder_can_be_updated_and_disabled():
+    created = client.post("/api/reminders", json={"title":"Funcional","time_local":"17:30"})
+    assert created.status_code == 201
+    rid = created.json()["id"]
+    updated = client.patch(f"/api/reminders/{rid}", json={"time_local":"18:15","active":False})
+    assert updated.status_code == 200
+    assert updated.json()["time_local"] == "18:15"
+    assert updated.json()["active"] is False
