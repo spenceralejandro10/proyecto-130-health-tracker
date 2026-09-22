@@ -66,7 +66,7 @@
         <div>
           <p class="kicker dark">MAPA DE EVOLUCIÓN</p>
           <h2>Todo el proyecto en una sola vista</h2>
-          <p>Las líneas muestran el cambio porcentual frente al primer día del período. <strong>0 % = punto de partida.</strong> Al pasar el cursor por un punto ves el valor real.</p>
+          <p id="trendPeriodLabel">Calculando cambios del período visible…</p>
         </div>
         <div class="tabs">
           <button class="range-btn" data-days="7">7 días</button>
@@ -78,7 +78,7 @@
       <div id="researchSummary" class="research-summary"></div>
       <div id="projectLegend" class="legend"></div>
       <div id="projectChart" class="project-chart"><span>Cargando…</span></div>
-      <p class="chart-note">Peso, grasa, músculo, agua, sueño y actividad tienen unidades distintas. Esta vista compara su dirección y cambio relativo; no mezcla sus unidades.</p>
+      <p class="chart-note" id="chartFocusNote">Calculando lectura de tendencias…</p>
     </section>
 
     <section class="panel analysis-panel">
@@ -86,7 +86,7 @@
         <div>
           <p class="kicker dark">MOTOR DE INTERPRETACIÓN</p>
           <h2>Qué cambió y qué puede explicarlo</h2>
-          <p>El sistema separa los cambios calculados de las hipótesis. Ninguna variación de grasa, músculo o agua se presenta como un hecho si la báscula solo permite estimarla.</p>
+          <p id="analysisPeriod">Calculando la comparación corporal más reciente…</p>
         </div>
         <span id="analysisConfidence" class="status-pill">Confianza —</span>
       </div>
@@ -96,6 +96,7 @@
       </div>
       <div id="analysisObservations" class="analysis-observations"></div>
       <div id="analysisHypotheses" class="analysis-hypotheses"></div>
+      <div id="analysisContext" class="analysis-context"></div>
       <p id="analysisDecisionNote" class="analysis-decision"></p>
       <details class="analysis-limits">
         <summary>Qué no puede afirmar el sistema con estos datos</summary>
@@ -120,13 +121,13 @@
         <p class="kicker dark">COMPOSICIÓN CORPORAL</p>
         <h2>Cada indicador con inicio, cambio y tendencia</h2>
       </div>
-      <p>Los valores de grasa, músculo, agua y grasa visceral son estimaciones de la báscula Xiaomi y se usan principalmente para observar tendencias.</p>
+      <p id="compositionPeriodNote">Calculando cambios del período seleccionado…</p>
     </section>
 
     <section class="composition-grid">
       <article class="composition-card" data-metric="body_fat_pct">
         <div class="composition-head"><span>Grasa corporal</span><strong id="bodyFat">—</strong></div>
-        <p class="definition">Proporción estimada de tu peso que corresponde a grasa.</p>
+        <p class="definition" id="bodyFatPeriod">Calculando…</p>
         <div id="bodyFatChart" class="mini-chart"></div>
         <div class="metric-row"><span>Inicio</span><strong id="bodyFatStart">—</strong></div>
         <div class="metric-row"><span>Cambio</span><strong id="bodyFatChange">—</strong></div>
@@ -135,7 +136,7 @@
 
       <article class="composition-card" data-metric="muscle_mass_kg">
         <div class="composition-head"><span>Masa muscular</span><strong id="muscleMass">—</strong></div>
-        <p class="definition">Estimación de masa muscular; se interpreta junto con tu rendimiento de fuerza.</p>
+        <p class="definition" id="musclePeriod">Calculando…</p>
         <div id="muscleChart" class="mini-chart"></div>
         <div class="metric-row"><span>Inicio</span><strong id="muscleStart">—</strong></div>
         <div class="metric-row"><span>Cambio</span><strong id="muscleChange">—</strong></div>
@@ -144,16 +145,16 @@
 
       <article class="composition-card" data-metric="body_water_pct">
         <div class="composition-head"><span>Agua corporal</span><strong id="bodyWater">—</strong></div>
-        <p class="definition">Estimación del porcentaje de agua corporal. Puede variar con hidratación, comida y hora.</p>
+        <p class="definition" id="waterPeriod">Calculando…</p>
         <div id="waterChart" class="mini-chart"></div>
         <div class="metric-row"><span>Inicio</span><strong id="waterStart">—</strong></div>
         <div class="metric-row"><span>Cambio</span><strong id="waterChange">—</strong></div>
-        <p id="waterText" class="plain-note">Este porcentaje no se convierte directamente en “litros que debes beber”.</p>
+        <p id="waterText" class="plain-note"></p>
       </article>
 
       <article class="composition-card" data-metric="visceral_fat_index">
         <div class="composition-head"><span>Grasa visceral</span><strong id="visceralFat">—</strong></div>
-        <p class="definition">Índice estimado de grasa alrededor de los órganos; seguimos su tendencia.</p>
+        <p class="definition" id="visceralPeriod">Calculando…</p>
         <div id="visceralChart" class="mini-chart"></div>
         <div class="metric-row"><span>Inicio</span><strong id="visceralStart">—</strong></div>
         <div class="metric-row"><span>Cambio</span><strong id="visceralChange">—</strong></div>
