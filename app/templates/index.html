@@ -3,105 +3,148 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Proyecto 130</title>
+  <title>Estudio 130</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">PROYECTO 130</p>
-      <h1>Estado de hoy</h1>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <p class="kicker">PACIENTE CERO · INVESTIGACIÓN PERSONAL</p>
+        <h1>Estudio 130</h1>
+        <p class="subtitle">Composición corporal, rendimiento y adherencia durante 130 días.</p>
+      </div>
+      <div class="hero-badges">
+        <span id="demoBadge" class="badge badge-demo">Datos simulados</span>
+        <span id="sync" class="badge">Actualizando…</span>
+      </div>
     </div>
-    <div id="sync" class="sync">Cargando…</div>
   </header>
 
   <main class="shell">
-    <section id="message" class="message"></section>
+    <section class="overview-grid">
+      <article class="overview-card weight-card">
+        <div class="card-title"><span>Peso y objetivo</span><small id="weightStatus">Cargando…</small></div>
+        <div class="big-number" id="weight">—</div>
+        <div class="metric-row"><span>Inicio</span><strong id="weightStart">—</strong></div>
+        <div class="metric-row"><span>Cambio</span><strong id="weightChange">—</strong></div>
+        <div class="metric-row"><span>Promedio últimos 7 días</span><strong id="weightAvg">—</strong></div>
+        <div class="progress"><i id="weightProgress"></i></div>
+        <p class="plain-note" id="weightExplanation"></p>
+      </article>
 
-    <section class="grid metrics">
-      <article class="card"><span>Peso actual</span><strong id="weight">—</strong><small id="weightDelta">Sin línea base</small></article>
-      <article class="card"><span>Promedio 7 días</span><strong id="avg7">—</strong><small>Tendencia, no lectura aislada</small></article>
-      <article class="card"><span>Día del ciclo</span><strong id="day">—</strong><small id="remaining">Inicio pendiente</small></article>
-      <article class="card"><span>Actividad hoy</span><strong id="activity">0 min</strong><small id="integrated">0 min integrados</small></article>
-      <article class="card"><span>Sueño reciente</span><strong id="sleep">—</strong><small>Contexto de recuperación</small></article>
-      <article class="card"><span>Próximo recordatorio</span><strong id="nextReminder">—</strong><small id="nextReminderTime">Sin recordatorios</small></article>
+      <article class="overview-card">
+        <div class="card-title"><span>Avance del estudio</span><small>130 días</small></div>
+        <div class="big-number" id="day">—</div>
+        <div class="metric-row"><span>Días restantes</span><strong id="remaining">—</strong></div>
+        <div class="metric-row"><span>Meta de peso</span><strong id="goalWeight">—</strong></div>
+        <div class="metric-row"><span>Viaje</span><strong id="trip">Febrero 2027</strong></div>
+        <p class="plain-note" id="tripNote">Fecha exacta del vuelo pendiente.</p>
+      </article>
+
+      <article class="overview-card">
+        <div class="card-title"><span>Plan de hoy</span><small id="todayTraining">—</small></div>
+        <div class="big-number" id="todayCompletion">—</div>
+        <div id="todayPlan" class="today-plan"></div>
+      </article>
+
+      <article class="overview-card">
+        <div class="card-title"><span>Sueño y recuperación</span><small>Última noche</small></div>
+        <div class="big-number" id="sleep">—</div>
+        <div class="metric-row"><span>Promedio 7 días</span><strong id="sleepAvg">—</strong></div>
+        <div class="metric-row"><span>Objetivo del proyecto</span><strong>7–9 h</strong></div>
+        <div id="sleepMiniChart" class="mini-chart"></div>
+        <p class="plain-note" id="sleepInterpretation">Cargando tendencia…</p>
+      </article>
     </section>
 
-
-    <section class="panel composition-panel">
-      <div class="panel-head"><h2>Composición estimada</h2><small>Referencia clínica: pendiente de configuración</small></div>
-      <div class="grid composition-grid">
-        <article class="mini"><span>Grasa corporal</span><strong id="bodyFat">—</strong><small id="bodyFatTrend">Sin datos</small></article>
-        <article class="mini"><span>Masa muscular</span><strong id="muscleMass">—</strong><small id="muscleTrend">Sin datos</small></article>
-        <article class="mini"><span>Agua corporal</span><strong id="bodyWater">—</strong><small id="waterTrend">Sin datos</small></article>
-        <article class="mini"><span>Grasa visceral</span><strong id="visceralFat">—</strong><small id="visceralTrend">Sin datos</small></article>
-      </div>
-    </section>
-
-    <section class="panel executive-panel">
-      <div class="panel-head executive-head">
+    <section class="panel research-map">
+      <div class="panel-head research-head">
         <div>
-          <p class="eyebrow">MAPA DEL PROYECTO</p>
-          <h2>Estado general de los 130 días</h2>
-          <p class="chart-help">Una sola vista para relacionar peso, composición, actividad y recuperación. Cada línea conserva su valor real al señalarla.</p>
+          <p class="kicker dark">MAPA DE EVOLUCIÓN</p>
+          <h2>Todo el proyecto en una sola vista</h2>
+          <p>Las líneas muestran el cambio porcentual frente al primer día del período. <strong>0 % = punto de partida.</strong> Al pasar el cursor por un punto ves el valor real.</p>
         </div>
-        <div class="tabs compact">
-          <button class="trend-window" data-days="7">7 días</button>
-          <button class="trend-window active" data-days="14">14 días</button>
-          <button class="trend-window" data-days="30">30 días</button>
-          <button class="trend-window" data-days="130">Todo</button>
+        <div class="tabs">
+          <button class="range-btn" data-days="7">7 días</button>
+          <button class="range-btn active" data-days="14">14 días</button>
+          <button class="range-btn" data-days="30">30 días</button>
+          <button class="range-btn" data-days="130">Todo</button>
         </div>
       </div>
-      <div class="project-summary" id="projectSummary"></div>
-      <div class="legend" id="projectLegend"></div>
-      <div id="projectChart" class="project-chart"><span>Cargando evolución…</span></div>
-      <div class="chart-scale"><span>Inicio del período</span><strong>100 = punto de partida de cada indicador</strong><span>Estado actual</span></div>
-      <p class="chart-note">La escala común sirve para comparar dirección y estabilidad; no significa que kg, %, horas y minutos sean equivalentes. Los datos de composición de la báscula son estimaciones del dispositivo.</p>
+      <div id="researchSummary" class="research-summary"></div>
+      <div id="projectLegend" class="legend"></div>
+      <div id="projectChart" class="project-chart"><span>Cargando…</span></div>
+      <p class="chart-note">Peso, grasa, músculo, agua, sueño y actividad tienen unidades distintas. Esta vista compara su dirección y cambio relativo; no mezcla sus unidades.</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="kicker dark">ACTIVIDAD</p>
+          <h2>Qué hiciste realmente</h2>
+        </div>
+        <strong id="activityTotal">—</strong>
+      </div>
+      <div id="activityTimeline" class="activity-timeline"></div>
+      <div id="activityMiniChart" class="wide-mini-chart"></div>
+    </section>
+
+    <section class="section-title">
+      <div>
+        <p class="kicker dark">COMPOSICIÓN CORPORAL</p>
+        <h2>Cada indicador con inicio, cambio y tendencia</h2>
+      </div>
+      <p>Los valores de grasa, músculo, agua y grasa visceral son estimaciones de la báscula Xiaomi y se usan principalmente para observar tendencias.</p>
+    </section>
+
+    <section class="composition-grid">
+      <article class="composition-card" data-metric="body_fat_pct">
+        <div class="composition-head"><span>Grasa corporal</span><strong id="bodyFat">—</strong></div>
+        <p class="definition">Proporción estimada de tu peso que corresponde a grasa.</p>
+        <div id="bodyFatChart" class="mini-chart"></div>
+        <div class="metric-row"><span>Inicio</span><strong id="bodyFatStart">—</strong></div>
+        <div class="metric-row"><span>Cambio</span><strong id="bodyFatChange">—</strong></div>
+        <p id="bodyFatText" class="plain-note"></p>
+      </article>
+
+      <article class="composition-card" data-metric="muscle_mass_kg">
+        <div class="composition-head"><span>Masa muscular</span><strong id="muscleMass">—</strong></div>
+        <p class="definition">Estimación de masa muscular; se interpreta junto con tu rendimiento de fuerza.</p>
+        <div id="muscleChart" class="mini-chart"></div>
+        <div class="metric-row"><span>Inicio</span><strong id="muscleStart">—</strong></div>
+        <div class="metric-row"><span>Cambio</span><strong id="muscleChange">—</strong></div>
+        <p id="muscleText" class="plain-note"></p>
+      </article>
+
+      <article class="composition-card" data-metric="body_water_pct">
+        <div class="composition-head"><span>Agua corporal</span><strong id="bodyWater">—</strong></div>
+        <p class="definition">Estimación del porcentaje de agua corporal. Puede variar con hidratación, comida y hora.</p>
+        <div id="waterChart" class="mini-chart"></div>
+        <div class="metric-row"><span>Inicio</span><strong id="waterStart">—</strong></div>
+        <div class="metric-row"><span>Cambio</span><strong id="waterChange">—</strong></div>
+        <p id="waterText" class="plain-note">Este porcentaje no se convierte directamente en “litros que debes beber”.</p>
+      </article>
+
+      <article class="composition-card" data-metric="visceral_fat_index">
+        <div class="composition-head"><span>Grasa visceral</span><strong id="visceralFat">—</strong></div>
+        <p class="definition">Índice estimado de grasa alrededor de los órganos; seguimos su tendencia.</p>
+        <div id="visceralChart" class="mini-chart"></div>
+        <div class="metric-row"><span>Inicio</span><strong id="visceralStart">—</strong></div>
+        <div class="metric-row"><span>Cambio</span><strong id="visceralChange">—</strong></div>
+        <p id="visceralText" class="plain-note"></p>
+      </article>
     </section>
 
     <section class="two-col">
       <article class="panel">
-        <div class="panel-head"><h2>Alertas y revisión</h2><span class="pill" id="quality">—</span></div>
-        <ul id="alerts" class="alerts"><li>Sin alertas.</li></ul>
+        <div class="panel-head"><h2>Qué requiere atención</h2><span id="quality" class="status-pill">—</span></div>
+        <div id="alerts" class="attention-list"></div>
       </article>
-
       <article class="panel">
-        <h2>Registro rápido</h2>
-        <div class="tabs">
-          <button class="tab active" data-tab="weightForm">Peso</button>
-          <button class="tab" data-tab="activityForm">Actividad</button>
-          <button class="tab" data-tab="strengthForm">Fuerza</button>
-          <button class="tab" data-tab="sleepForm">Sueño</button>
-        </div>
-
-        <form id="weightForm" class="quick-form active">
-          <label>Peso (kg)<input name="value" type="number" step="0.1" min="0" required></label>
-          <label>Fuente<input name="source" value="Xiaomi Mi Body Composition Scale 2" required></label>
-          <label>Evidencia / referencia<input name="evidence_ref" placeholder="foto/captura opcional"></label>
-          <button type="submit">Registrar peso</button>
-        </form>
-
-        <form id="activityForm" class="quick-form">
-          <label>Actividad<input name="activity_type" value="walk" required></label>
-          <label>Duración (min)<input name="duration_min" type="number" step="1" min="1" required></label>
-          <label class="check"><input name="integrated" type="checkbox"> Actividad integrada con estudio/conversación</label>
-          <button type="submit">Registrar actividad</button>
-        </form>
-
-        <form id="strengthForm" class="quick-form">
-          <label>Ejercicio<input name="exercise_name" required></label>
-          <div class="row"><label>Carga kg<input name="load_kg" type="number" step="0.5" min="0" required></label><label>Reps<input name="reps" type="number" min="1" required></label></div>
-          <label>Serie<input name="set_number" type="number" value="1" min="1" required></label>
-          <button type="submit">Registrar serie</button>
-        </form>
-
-        <form id="sleepForm" class="quick-form">
-          <label>Fecha<input name="sleep_date" type="date" required></label>
-          <label>Duración (min)<input name="duration_min" type="number" min="0"></label>
-          <div class="row"><label>Energía 1-10<input name="energy_score" type="number" min="1" max="10"></label><label>Fatiga 1-10<input name="fatigue_score" type="number" min="1" max="10"></label></div>
-          <button type="submit">Registrar sueño</button>
-        </form>
-        <p id="formStatus" class="form-status"></p>
+        <div class="panel-head"><h2>Próximo recordatorio</h2><span id="nextReminderTime" class="status-pill">—</span></div>
+        <div id="nextReminder" class="reminder-big">—</div>
+        <p class="plain-note">Los recordatorios del cliente de escritorio podrán marcarse como hecho, posponerse o descartarse sin alterar tus mediciones.</p>
       </article>
     </section>
   </main>
