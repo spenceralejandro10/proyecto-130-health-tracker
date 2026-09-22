@@ -93,3 +93,23 @@ Antes de ampliar el sistema, revisar [`docs/FUNCTIONAL_AUDIT_CHECKLIST.md`](docs
 - Las reglas nutricionales cuantitativas permanecen pendientes de revisión especializada.
 - La UI visual es funcional y deliberadamente mínima hasta auditoría UX.
 - SQLite es el almacenamiento inicial local, no una decisión irreversible para una futura versión multiusuario.
+
+
+## Motor de interpretación
+
+El dashboard incluye un motor determinista y auditable para explicar cambios entre mediciones comparables.
+
+Principios:
+- separa **datos observados** (por ejemplo, peso) de **estimaciones del dispositivo** (grasa, músculo, agua y grasa visceral);
+- identifica como **cálculos derivados** la masa grasa estimada (`peso × % grasa`) y la masa de agua estimada (`peso × % agua`);
+- compara fechas locales y usa la última lectura válida de cada indicador por día;
+- genera hipótesis en español con nivel de confianza `baja`, `media` o `alta`;
+- nunca convierte automáticamente una subida de peso en ganancia de grasa;
+- si peso, agua y composición cambian de forma concordante, describe el patrón como **compatible con** una explicación, no como causalidad demostrada;
+- expone explícitamente los límites de la bioimpedancia y de las bandas operativas del motor.
+
+El resultado se entrega dentro de `GET /api/dashboard` en el campo `interpretation` y la interfaz lo muestra debajo del mapa de evolución.
+
+### Regla de seguridad interpretativa
+
+Los cambios aritméticos pueden expresarse con precisión numérica porque salen de las lecturas registradas. Las explicaciones fisiológicas son hipótesis y requieren repetición, contexto y tendencia antes de tratarse como una señal estable. El sistema no sustituye mediciones clínicas ni debe inventar precisión que el instrumento no proporciona.
