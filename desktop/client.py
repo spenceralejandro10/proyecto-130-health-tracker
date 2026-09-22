@@ -32,7 +32,7 @@ class Widget:
         self.root.title("Proyecto 130")
         self.root.attributes("-topmost", True)
         self.root.resizable(False, False)
-        self.root.protocol("WM_DELETE_WINDOW", self.hide)
+        self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
         self.expanded = False
         self.last_due_ids: set[int] = set()
 
@@ -47,6 +47,8 @@ class Widget:
         self.actions = tk.Frame(self.frame, bg="#ffffff")
         self.toggle = tk.Button(self.actions, text="Detalles", command=self.toggle_expand)
         self.toggle.pack(side="left")
+        self.hide_btn = tk.Button(self.actions, text="Ocultar 30 min", command=self.hide_temporarily)
+        self.hide_btn.pack(side="left", padx=(5,0))
         self.actions.pack(anchor="e", pady=(8, 0))
         self.position_bottom_right()
         self.refresh()
@@ -61,8 +63,13 @@ class Widget:
         self.expanded = not self.expanded
         self.root.geometry("390x220" if self.expanded else "330x125")
 
-    def hide(self):
+    def hide_temporarily(self):
         self.root.withdraw()
+        self.root.after(30 * 60 * 1000, self.show_again)
+
+    def show_again(self):
+        self.root.deiconify()
+        self.position_bottom_right()
 
     def refresh(self):
         try:
@@ -104,8 +111,12 @@ class Widget:
     def respond(self, reminder_id: int, action: str, win: tk.Toplevel):
         try:
             request_json(f"/api/reminders/{reminder_id}/event", "POST", {"action": action})
-        finally:
-            win.destroy()
+        except Exception as exc:
+            win.title(f"No se pudo guardar: {type(exc).__name__}")
+            return
+        if action == "snooze":
+            self.last_due_ids.discard(reminder_id)
+        win.destroy()
 
     def run(self):
         self.root.mainloop()
