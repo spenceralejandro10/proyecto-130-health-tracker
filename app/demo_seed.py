@@ -76,7 +76,9 @@ def seed_demo_data() -> None:
                 ))
 
                 # No todos los días se completa el bloque funcional: así la adherencia es visible.
-                if i not in {3, 8, 12}:
+                current_hour = datetime.now(settings.timezone).hour if d == today else 23
+
+                if i not in {3, 8, 12} and current_hour >= 16:
                     functional_minutes = 20 if i % 2 == 0 else 25
                     db.add(Activity(
                         started_at=_local_dt(d, 16, 30), activity_type="funcional_tarde", duration_min=functional_minutes,
@@ -85,7 +87,7 @@ def seed_demo_data() -> None:
                         notes="Sesión funcional simulada."
                     ))
 
-                if i in {1,2,4,5,7,9,10,11,13}:
+                if i in {1,2,4,5,7,9,10,11,13} and current_hour >= 19:
                     evening_walk = 30 if i % 3 else 40
                     db.add(Activity(
                         started_at=_local_dt(d, 19, 30), activity_type="caminata_noche", duration_min=evening_walk,
