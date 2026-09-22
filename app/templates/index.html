@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Estudio 130</title>
-  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/styles.css?v=20260922-3">
 </head>
 <body>
   <header class="hero">
@@ -61,6 +61,39 @@
       </article>
     </section>
 
+    <section class="panel energy-panel">
+      <div class="panel-head">
+        <div>
+          <p class="kicker dark">METABOLISMO Y BALANCE</p>
+          <h2>Lo que tu cuerpo está gastando hoy</h2>
+        </div>
+        <strong id="restingEnergy">—</strong>
+      </div>
+      <div class="energy-grid">
+        <div class="energy-item">
+          <span>Gasto en reposo</span>
+          <strong id="restingEnergyValue">—</strong>
+          <small id="restingEnergyChange">—</small>
+        </div>
+        <div class="energy-item">
+          <span>Actividad registrada</span>
+          <strong id="activityEnergy">—</strong>
+          <small id="activityEnergyMinutes">—</small>
+        </div>
+        <div class="energy-item">
+          <span>Gasto contabilizado</span>
+          <strong id="accountedEnergy">—</strong>
+          <small>TMB + actividad registrada</small>
+        </div>
+        <div class="energy-item">
+          <span>Ingesta registrada</span>
+          <strong id="intakeEnergy">—</strong>
+          <small id="energyBalance">—</small>
+        </div>
+      </div>
+      <p class="energy-summary" id="energySummary">Calculando estado energético…</p>
+    </section>
+
     <section class="panel research-map">
       <div class="panel-head research-head">
         <div>
@@ -85,10 +118,10 @@
       <div class="panel-head analysis-title">
         <div>
           <p class="kicker dark">MOTOR DE INTERPRETACIÓN</p>
-          <h2>Qué cambió y qué puede explicarlo</h2>
+          <h2>Lectura automática del estado</h2>
           <p id="analysisPeriod">Calculando la comparación corporal más reciente…</p>
         </div>
-        <span id="analysisConfidence" class="status-pill">Confianza —</span>
+        <span id="analysisConfidence" class="status-pill">— variables cruzadas</span>
       </div>
       <div class="analysis-lead">
         <strong id="analysisHeadline">Esperando datos comparables…</strong>
@@ -99,7 +132,7 @@
       <div id="analysisContext" class="analysis-context"></div>
       <p id="analysisDecisionNote" class="analysis-decision"></p>
       <details class="analysis-limits">
-        <summary>Qué no puede afirmar el sistema con estos datos</summary>
+        <summary>Cómo se calculó</summary>
         <div id="analysisLimits"></div>
       </details>
     </section>
@@ -174,6 +207,6 @@
       </article>
     </section>
   </main>
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=20260922-3"></script>
 </body>
 </html>
