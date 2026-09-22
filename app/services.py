@@ -175,6 +175,93 @@ def composition_summary(db: Session) -> dict:
     return out
 
 
+def goal_pace(db: Session) -> dict:
+    values = _metric_values(db, WEIGHT_KEY)
+    if not values:
+        return {
+            "goal_weight_kg": settings.goal_weight_kg,
+            "current_weight_kg": None,
+            "remaining_kg": None,
+            "days_left": max((settings.project_end_date - datetime.now(settings.timezone).date()).days, 0),
+            "weeks_left": None,
+            "required_kg_per_week": None,
+            "actual_kg_per_week": None,
+            "target_weight_today": None,
+            "difference_to_target_kg": None,
+            "status": "sin_datos",
+            "series": [],
+        }
+
+    daily: dict = {}
+    for row in values:
+        if row.value is not None:
+            day = utc_naive_to_local_date(row.captured_at)
+            if day <= datetime.now(settings.timezone).date():
+                daily[day] = float(row.value)
+
+    ordered = sorted(daily.items())
+    if not ordered:
+        return {"status": "sin_datos", "series": [], "goal_weight_kg": settings.goal_weight_kg}
+
+    baseline_day, baseline_weight = ordered[0]
+    current_day, current_weight = ordered[-1]
+    today = datetime.now(settings.timezone).date()
+    days_left = max((settings.project_end_date - today).days, 0)
+    weeks_left = days_left / 7 if days_left > 0 else 0
+    remaining_kg = max(current_weight - settings.goal_weight_kg, 0)
+    required = remaining_kg / weeks_left if weeks_left > 0 else 0.0 if remaining_kg <= 0 else None
+
+    recent = [(d, w) for d, w in ordered if (current_day - d).days <= 7]
+    if len(recent) >= 2 and (recent[-1][0] - recent[0][0]).days > 0:
+        span_weeks = (recent[-1][0] - recent[0][0]).days / 7
+        actual = (recent[0][1] - recent[-1][1]) / span_weeks
+    elif len(ordered) >= 2 and (current_day - baseline_day).days > 0:
+        span_weeks = (current_day - baseline_day).days / 7
+        actual = (baseline_weight - current_weight) / span_weeks
+    else:
+        actual = None
+
+    total_days = max((settings.project_end_date - baseline_day).days, 1)
+    elapsed_days = max(min((today - baseline_day).days, total_days), 0)
+    target_today = baseline_weight + (settings.goal_weight_kg - baseline_weight) * (elapsed_days / total_days)
+    difference = current_weight - target_today
+
+    if current_weight <= settings.goal_weight_kg:
+        status = "meta_alcanzada"
+    elif difference > 0.3:
+        status = "por_encima_de_la_ruta"
+    elif difference < -0.3:
+        status = "por_debajo_de_la_ruta"
+    else:
+        status = "en_ruta"
+
+    series = []
+    for day, weight in ordered:
+        days_remaining = max((settings.project_end_date - day).days, 0)
+        weeks_remaining = days_remaining / 7 if days_remaining > 0 else 0
+        needed = max(weight - settings.goal_weight_kg, 0)
+        weekly = needed / weeks_remaining if weeks_remaining > 0 else 0.0 if needed <= 0 else None
+        series.append({
+            "date": day.isoformat(),
+            "weight_kg": round(weight, 2),
+            "required_kg_per_week": round(weekly, 3) if weekly is not None else None,
+        })
+
+    return {
+        "goal_weight_kg": settings.goal_weight_kg,
+        "current_weight_kg": round(current_weight, 2),
+        "remaining_kg": round(remaining_kg, 2),
+        "days_left": days_left,
+        "weeks_left": round(weeks_left, 2),
+        "required_kg_per_week": round(required, 3) if required is not None else None,
+        "actual_kg_per_week": round(actual, 3) if actual is not None else None,
+        "target_weight_today": round(target_today, 2),
+        "difference_to_target_kg": round(difference, 2),
+        "status": status,
+        "series": series,
+    }
+
+
 def dashboard(db: Session) -> dict:
     start = project_start(db)
     today = datetime.now(settings.timezone).date()
@@ -237,4 +324,5 @@ def dashboard(db: Session) -> dict:
         "data_quality": quality,
         "composition": composition_summary(db),
         "interpretation": interpret_body_composition(db),
+        "goal_pace": goal_pace(db),
     }
