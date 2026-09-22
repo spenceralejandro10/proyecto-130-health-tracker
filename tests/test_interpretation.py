@@ -51,10 +51,11 @@ def test_interpretation_distinguishes_observation_from_hypothesis():
     assert analysis["as_of"] == "2026-09-22"
     assert analysis["compared_with"] == "2026-09-21"
     assert any(item["key"] == "fat_mass_est_kg" and item["kind"] == "derivado" for item in analysis["observations"])
-    assert any(item["code"] == "fluid_compatible_gain" for item in analysis["hypotheses"])
-    assert "masa de agua estimada" in analysis["summary"].lower()
+    assert any(item["code"] == "weight_up_water_up_fat_not_up" for item in analysis["hypotheses"])
+    assert "agua corporal subió" in analysis["summary"].lower()
+    assert "grasa corporal bajó" in analysis["summary"].lower()
     assert "+1" in analysis["headline"] or "subió 1" in analysis["headline"].lower()
-    assert "medición clínica" in " ".join(analysis["limits"]).lower()
+    assert "tmb calculada" in " ".join(analysis["limits"]).lower()
 
 
 def test_interpretation_never_calls_device_estimates_direct_measurements():
@@ -96,4 +97,42 @@ def test_visible_metric_messages_are_results_not_hypothetical_instructions():
     assert "si baja" not in visible_text
     assert "si sube" not in visible_text
     assert "si observas" not in visible_text
-    assert "cambio frente a la medición anterior" in visible_text
+    assert "subió" in visible_text or "bajó" in visible_text or "no cambió" in visible_text
+    assert "se interpreta por tendencia" not in visible_text
+    assert "se sigue como tendencia" not in visible_text
+
+
+def test_resting_energy_recalculates_from_current_body_state():
+    _metric("2026-09-20", "weight_kg", 120.0, "kg", "measured", "energy")
+    _metric("2026-09-20", "body_fat_pct", 35.0, "%", tag="energy")
+    _metric("2026-09-22", "weight_kg", 118.0, "kg", "measured", "energy")
+    _metric("2026-09-22", "body_fat_pct", 35.0, "%", tag="energy")
+
+    dashboard = client.get("/api/dashboard")
+    assert dashboard.status_code == 200
+    energy = dashboard.json()["interpretation"]["energy"]
+
+    expected_lean = 118.0 * 0.65
+    expected_resting = round(370 + 21.6 * expected_lean)
+    previous_resting = round(370 + 21.6 * (120.0 * 0.65))
+
+    assert energy["lean_mass_est_kg"] == round(expected_lean, 2)
+    assert energy["resting_kcal_day"] == expected_resting
+    assert energy["resting_change_kcal_day"] == expected_resting - previous_resting
+
+
+def test_metric_copy_is_direct_not_instructional():
+    dashboard = client.get("/api/dashboard")
+    assert dashboard.status_code == 200
+    messages = dashboard.json()["interpretation"]["metric_messages"]
+    joined = " ".join(messages.values()).lower()
+
+    forbidden = [
+        "si baja",
+        "si sube",
+        "se interpreta por tendencia",
+        "se sigue como tendencia",
+        "no indica por sí solo",
+    ]
+    for phrase in forbidden:
+        assert phrase not in joined
