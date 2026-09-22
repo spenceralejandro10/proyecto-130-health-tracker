@@ -143,3 +143,4 @@ class DashboardResponse(BaseModel):
     alerts: list[str]
     data_quality: str
     composition: dict
+    interpretation: dict
