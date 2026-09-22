@@ -134,3 +134,41 @@ def test_metric_copy_is_direct_not_instructional():
     ]
     for phrase in forbidden:
         assert phrase not in joined
+
+
+def test_goal_pace_uses_90_kg_and_updates_from_weight():
+    dashboard = client.get("/api/dashboard")
+    assert dashboard.status_code == 200
+    data = dashboard.json()
+    pace = data["goal_pace"]
+
+    assert data["goal_weight_kg"] == 90.0
+    assert pace["goal_weight_kg"] == 90.0
+    if pace.get("current_weight_kg") is not None:
+        assert pace["remaining_kg"] == round(max(pace["current_weight_kg"] - 90.0, 0), 2)
+        assert pace["days_left"] >= 0
+        assert "series" in pace
+
+
+def test_nutrition_day_can_be_updated_and_recalculates_energy_series():
+    day = "2026-09-18"
+    first = {
+        "nutrition_date": day,
+        "calories": 1800,
+        "protein_g": 120,
+        "fat_g": 60,
+        "carbs_g": 180,
+        "source": "test",
+    }
+    second = {**first, "calories": 1700, "protein_g": 130}
+
+    response = client.put(f"/api/nutrition/{day}", json=first)
+    assert response.status_code == 200
+    response = client.put(f"/api/nutrition/{day}", json=second)
+    assert response.status_code == 200
+    assert response.json()["calories"] == 1700
+    assert response.json()["protein_g"] == 130
+
+    series = client.get("/api/project-series?days=14")
+    assert series.status_code == 200
+    assert "energy_history" in series.json()
