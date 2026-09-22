@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Estudio 130</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20260922-3">
+  <link rel="stylesheet" href="/static/styles.css?v=20260922-4">
 </head>
 <body>
   <header class="hero">
@@ -21,192 +21,255 @@
     </div>
   </header>
 
+  <nav class="workspace-tabs" aria-label="Secciones principales">
+    <button class="workspace-tab active" data-tab="results">Resultados</button>
+    <button class="workspace-tab" data-tab="energy">Energía y alimentación</button>
+  </nav>
+
   <main class="shell">
-    <section class="overview-grid">
-      <article class="overview-card weight-card">
-        <div class="card-title"><span>Peso y objetivo</span><small id="weightStatus">Cargando…</small></div>
-        <div class="big-number" id="weight">—</div>
-        <div class="metric-row"><span>Inicio</span><strong id="weightStart">—</strong></div>
-        <div class="metric-row"><span>Cambio</span><strong id="weightChange">—</strong></div>
-        <div class="metric-row"><span>Promedio últimos 7 días</span><strong id="weightAvg">—</strong></div>
-        <div class="progress"><i id="weightProgress"></i></div>
-        <p class="plain-note" id="weightExplanation"></p>
-      </article>
+    <div id="tab-results" class="workspace-view active">
+      <section class="overview-grid overview-grid-three">
+        <article class="overview-card weight-card">
+          <div class="card-title"><span>Peso y objetivo</span><small id="weightStatus">—</small></div>
+          <div class="big-number" id="weight">—</div>
+          <div class="metric-row"><span>Inicio</span><strong id="weightStart">—</strong></div>
+          <div class="metric-row"><span>Cambio total</span><strong id="weightChange">—</strong></div>
+          <div class="metric-row"><span>Promedio últimos 7 días</span><strong id="weightAvg">—</strong></div>
+          <div class="progress"><i id="weightProgress"></i></div>
+          <p class="plain-note" id="weightExplanation"></p>
+        </article>
 
-      <article class="overview-card">
-        <div class="card-title"><span>Cuenta regresiva</span><small>Meta · 1 feb 2027</small></div>
-        <div class="big-number countdown" id="countdown">—</div>
-        <div class="metric-row"><span>Periodo</span><strong>22 sep 2026 → 1 feb 2027</strong></div>
-        <div class="metric-row"><span>Objetivo</span><strong>118 kg → 90 kg</strong></div>
-        <div class="metric-row"><span>Avance temporal</span><strong id="day">—</strong></div>
-        <div class="metric-row"><span>Días restantes</span><strong id="remaining">—</strong></div>
-        <div class="metric-row"><span>Meta de peso</span><strong id="goalWeight">—</strong></div>
-        <div class="metric-row"><span>Viaje</span><strong id="trip">Febrero 2027</strong></div>
-        <p class="plain-note" id="tripNote">Fecha exacta del vuelo pendiente.</p>
-      </article>
+        <article class="overview-card">
+          <div class="card-title"><span>Cuenta regresiva</span><small>Meta · 1 feb 2027</small></div>
+          <div class="big-number countdown" id="countdown">—</div>
+          <div class="metric-row"><span>Periodo</span><strong>22 sep 2026 → 1 feb 2027</strong></div>
+          <div class="metric-row"><span>Objetivo</span><strong>118 kg → 90 kg</strong></div>
+          <div class="metric-row"><span>Avance temporal</span><strong id="day">—</strong></div>
+          <div class="metric-row"><span>Días restantes</span><strong id="remaining">—</strong></div>
+          <div class="metric-row"><span>Meta de peso</span><strong id="goalWeight">—</strong></div>
+          <p class="plain-note" id="tripNote">Fecha objetivo: 1 de febrero de 2027.</p>
+          <span id="trip" hidden>Febrero 2027</span>
+        </article>
 
-      <article class="overview-card">
-        <div class="card-title"><span>Plan de hoy</span><small id="todayTraining">—</small></div>
-        <div class="big-number" id="todayCompletion">—</div>
-        <div id="todayPlan" class="today-plan"></div>
-      </article>
+        <article class="overview-card">
+          <div class="card-title"><span>Sueño y recuperación</span><small>Última noche</small></div>
+          <div class="big-number" id="sleep">—</div>
+          <div class="metric-row"><span>Promedio 7 días</span><strong id="sleepAvg">—</strong></div>
+          <div class="metric-row"><span>Objetivo</span><strong>7–9 h</strong></div>
+          <div id="sleepMiniChart" class="mini-chart"></div>
+          <p class="plain-note" id="sleepInterpretation">—</p>
+        </article>
+      </section>
 
-      <article class="overview-card">
-        <div class="card-title"><span>Sueño y recuperación</span><small>Última noche</small></div>
-        <div class="big-number" id="sleep">—</div>
-        <div class="metric-row"><span>Promedio 7 días</span><strong id="sleepAvg">—</strong></div>
-        <div class="metric-row"><span>Objetivo del proyecto</span><strong>7–9 h</strong></div>
-        <div id="sleepMiniChart" class="mini-chart"></div>
-        <p class="plain-note" id="sleepInterpretation">—</p>
-      </article>
-    </section>
+      <section class="panel goal-pace-panel">
+        <div class="panel-head goal-pace-head">
+          <div>
+            <p class="kicker dark">RITMO HACIA 90 KG</p>
+            <h2>Cuánto debe cambiar el peso desde hoy</h2>
+            <p id="goalPaceSentence">—</p>
+          </div>
+          <div class="goal-pace-number">
+            <strong id="requiredWeeklyLoss">—</strong>
+            <span>kg/semana requeridos</span>
+          </div>
+        </div>
+        <div class="goal-pace-grid">
+          <div><span>Peso actual</span><strong id="paceCurrentWeight">—</strong></div>
+          <div><span>Falta por bajar</span><strong id="paceRemainingWeight">—</strong></div>
+          <div><span>Ritmo observado</span><strong id="paceActualWeekly">—</strong></div>
+          <div><span>Peso de ruta hoy</span><strong id="paceTargetToday">—</strong></div>
+        </div>
+        <div id="goalPaceChart" class="goal-pace-chart"></div>
+        <p id="goalPaceStatus" class="energy-summary">—</p>
+      </section>
 
-    <section class="panel energy-panel">
-      <div class="panel-head">
+      <section class="panel research-map">
+        <div class="panel-head research-head">
+          <div>
+            <p class="kicker dark">MAPA DE EVOLUCIÓN</p>
+            <h2>Todo el proyecto en una sola vista</h2>
+            <p id="trendPeriodLabel">—</p>
+          </div>
+          <div class="tabs">
+            <button class="range-btn" data-days="7">7 días</button>
+            <button class="range-btn active" data-days="14">14 días</button>
+            <button class="range-btn" data-days="30">30 días</button>
+            <button class="range-btn" data-days="132">Todo</button>
+          </div>
+        </div>
+        <div id="researchSummary" class="research-summary"></div>
+        <div id="projectLegend" class="legend"></div>
+        <div id="projectChart" class="project-chart"><span>—</span></div>
+        <p class="chart-note" id="chartFocusNote">—</p>
+      </section>
+
+      <section class="panel analysis-panel">
+        <div class="panel-head analysis-title">
+          <div>
+            <p class="kicker dark">MOTOR DE INTERPRETACIÓN</p>
+            <h2>Lectura automática del estado</h2>
+            <p id="analysisPeriod">—</p>
+          </div>
+          <span id="analysisConfidence" class="status-pill">— variables cruzadas</span>
+        </div>
+        <div class="analysis-lead">
+          <strong id="analysisHeadline">—</strong>
+          <p id="analysisSummary" class="plain-note"></p>
+        </div>
+        <div id="analysisObservations" class="analysis-observations"></div>
+        <div id="analysisHypotheses" class="analysis-hypotheses"></div>
+        <div id="analysisContext" class="analysis-context"></div>
+        <p id="analysisDecisionNote" class="analysis-decision"></p>
+        <details class="analysis-limits">
+          <summary>Cómo se calculó</summary>
+          <div id="analysisLimits"></div>
+        </details>
+      </section>
+
+      <section class="section-title">
         <div>
-          <p class="kicker dark">METABOLISMO Y BALANCE</p>
-          <h2>Lo que tu cuerpo está gastando hoy</h2>
+          <p class="kicker dark">COMPOSICIÓN CORPORAL</p>
+          <h2>Qué subió y qué bajó</h2>
         </div>
-        <strong id="restingEnergy">—</strong>
-      </div>
-      <div class="energy-grid">
-        <div class="energy-item">
-          <span>Gasto en reposo</span>
-          <strong id="restingEnergyValue">—</strong>
-          <small id="restingEnergyChange">—</small>
+        <p id="compositionPeriodNote">—</p>
+      </section>
+
+      <section class="composition-grid">
+        <article class="composition-card" data-metric="body_fat_pct">
+          <div class="composition-head"><span>Grasa corporal</span><strong id="bodyFat">—</strong></div>
+          <p class="definition" id="bodyFatPeriod">—</p>
+          <div id="bodyFatChart" class="mini-chart"></div>
+          <div class="metric-row"><span>Inicio</span><strong id="bodyFatStart">—</strong></div>
+          <div class="metric-row"><span>Cambio</span><strong id="bodyFatChange">—</strong></div>
+          <p id="bodyFatText" class="plain-note"></p>
+        </article>
+
+        <article class="composition-card" data-metric="muscle_mass_kg">
+          <div class="composition-head"><span>Masa muscular</span><strong id="muscleMass">—</strong></div>
+          <p class="definition" id="musclePeriod">—</p>
+          <div id="muscleChart" class="mini-chart"></div>
+          <div class="metric-row"><span>Inicio</span><strong id="muscleStart">—</strong></div>
+          <div class="metric-row"><span>Cambio</span><strong id="muscleChange">—</strong></div>
+          <p id="muscleText" class="plain-note"></p>
+        </article>
+
+        <article class="composition-card" data-metric="body_water_pct">
+          <div class="composition-head"><span>Agua corporal</span><strong id="bodyWater">—</strong></div>
+          <p class="definition" id="waterPeriod">—</p>
+          <div id="waterChart" class="mini-chart"></div>
+          <div class="metric-row"><span>Inicio</span><strong id="waterStart">—</strong></div>
+          <div class="metric-row"><span>Cambio</span><strong id="waterChange">—</strong></div>
+          <p id="waterText" class="plain-note"></p>
+        </article>
+
+        <article class="composition-card" data-metric="visceral_fat_index">
+          <div class="composition-head"><span>Grasa visceral</span><strong id="visceralFat">—</strong></div>
+          <p class="definition" id="visceralPeriod">—</p>
+          <div id="visceralChart" class="mini-chart"></div>
+          <div class="metric-row"><span>Inicio</span><strong id="visceralStart">—</strong></div>
+          <div class="metric-row"><span>Cambio</span><strong id="visceralChange">—</strong></div>
+          <p id="visceralText" class="plain-note"></p>
+        </article>
+      </section>
+
+      <section class="two-col">
+        <article class="panel">
+          <div class="panel-head"><h2>Qué requiere atención</h2><span id="quality" class="status-pill">—</span></div>
+          <div id="alerts" class="attention-list"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><h2>Próximo recordatorio</h2><span id="nextReminderTime" class="status-pill">—</span></div>
+          <div id="nextReminder" class="reminder-big">—</div>
+        </article>
+      </section>
+    </div>
+
+    <div id="tab-energy" class="workspace-view" hidden>
+      <section class="panel energy-panel">
+        <div class="panel-head">
+          <div>
+            <p class="kicker dark">GASTO DEL DÍA</p>
+            <h2>Energía y alimentación</h2>
+          </div>
+          <strong id="restingEnergy">—</strong>
         </div>
-        <div class="energy-item">
-          <span>Actividad registrada</span>
-          <strong id="activityEnergy">—</strong>
-          <small id="activityEnergyMinutes">—</small>
+        <div class="energy-grid">
+          <div class="energy-item">
+            <span>Gasto en reposo</span>
+            <strong id="restingEnergyValue">—</strong>
+            <small id="restingEnergyChange">—</small>
+          </div>
+          <div class="energy-item">
+            <span>Ejercicio registrado</span>
+            <strong id="activityEnergy">—</strong>
+            <small id="activityEnergyMinutes">—</small>
+          </div>
+          <div class="energy-item">
+            <span>Gasto contabilizado</span>
+            <strong id="accountedEnergy">—</strong>
+            <small>Reposo + ejercicio registrado</small>
+          </div>
+          <div class="energy-item">
+            <span>Calorías ingeridas</span>
+            <strong id="intakeEnergy">—</strong>
+            <small id="energyBalance">—</small>
+          </div>
         </div>
-        <div class="energy-item">
-          <span>Gasto contabilizado</span>
-          <strong id="accountedEnergy">—</strong>
-          <small>TMB + actividad registrada</small>
+        <p class="energy-summary" id="energySummary">—</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="kicker dark">HISTORIAL ENERGÉTICO</p>
+            <h2>Calorías por día</h2>
+          </div>
+          <span id="energyHistoryRange" class="status-pill">14 días</span>
         </div>
-        <div class="energy-item">
-          <span>Ingesta registrada</span>
-          <strong id="intakeEnergy">—</strong>
-          <small id="energyBalance">—</small>
+        <div id="energyChart" class="energy-history-chart"></div>
+        <p id="energyHistorySummary" class="plain-note">—</p>
+      </section>
+
+      <section class="two-col energy-entry-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="kicker dark">ALIMENTACIÓN</p>
+              <h2>Registrar el día</h2>
+            </div>
+          </div>
+          <form id="nutritionForm" class="nutrition-form">
+            <label>Fecha<input id="nutritionDate" type="date" required></label>
+            <label>Calorías ingeridas<input id="nutritionCalories" type="number" min="0" step="1" placeholder="Ej. 1800"></label>
+            <label>Proteína (g)<input id="nutritionProtein" type="number" min="0" step="1" placeholder="Opcional"></label>
+            <label>Carbohidratos (g)<input id="nutritionCarbs" type="number" min="0" step="1" placeholder="Opcional"></label>
+            <label>Grasa (g)<input id="nutritionFat" type="number" min="0" step="1" placeholder="Opcional"></label>
+            <button type="submit" class="primary-btn">Guardar día</button>
+          </form>
+          <p id="nutritionStatus" class="plain-note"></p>
+        </article>
+
+        <article class="panel">
+          <div class="card-title"><span>Plan de hoy</span><small id="todayTraining">—</small></div>
+          <div class="big-number" id="todayCompletion">—</div>
+          <div id="todayPlan" class="today-plan"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="kicker dark">ACTIVIDAD</p>
+            <h2>Qué hiciste realmente</h2>
+          </div>
+          <strong id="activityTotal">—</strong>
         </div>
-      </div>
-      <p class="energy-summary" id="energySummary">—</p>
-    </section>
-
-    <section class="panel research-map">
-      <div class="panel-head research-head">
-        <div>
-          <p class="kicker dark">MAPA DE EVOLUCIÓN</p>
-          <h2>Todo el proyecto en una sola vista</h2>
-          <p id="trendPeriodLabel">—</p>
-        </div>
-        <div class="tabs">
-          <button class="range-btn" data-days="7">7 días</button>
-          <button class="range-btn active" data-days="14">14 días</button>
-          <button class="range-btn" data-days="30">30 días</button>
-          <button class="range-btn" data-days="132">Todo</button>
-        </div>
-      </div>
-      <div id="researchSummary" class="research-summary"></div>
-      <div id="projectLegend" class="legend"></div>
-      <div id="projectChart" class="project-chart"><span>Cargando…</span></div>
-      <p class="chart-note" id="chartFocusNote">—</p>
-    </section>
-
-    <section class="panel analysis-panel">
-      <div class="panel-head analysis-title">
-        <div>
-          <p class="kicker dark">MOTOR DE INTERPRETACIÓN</p>
-          <h2>Lectura automática del estado</h2>
-          <p id="analysisPeriod">—</p>
-        </div>
-        <span id="analysisConfidence" class="status-pill">— variables cruzadas</span>
-      </div>
-      <div class="analysis-lead">
-        <strong id="analysisHeadline">Esperando datos comparables…</strong>
-        <p id="analysisSummary" class="plain-note"></p>
-      </div>
-      <div id="analysisObservations" class="analysis-observations"></div>
-      <div id="analysisHypotheses" class="analysis-hypotheses"></div>
-      <div id="analysisContext" class="analysis-context"></div>
-      <p id="analysisDecisionNote" class="analysis-decision"></p>
-      <details class="analysis-limits">
-        <summary>Cómo se calculó</summary>
-        <div id="analysisLimits"></div>
-      </details>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <div>
-          <p class="kicker dark">ACTIVIDAD</p>
-          <h2>Qué hiciste realmente</h2>
-        </div>
-        <strong id="activityTotal">—</strong>
-      </div>
-      <div id="activityTimeline" class="activity-timeline"></div>
-      <div id="activityMiniChart" class="wide-mini-chart"></div>
-    </section>
-
-    <section class="section-title">
-      <div>
-        <p class="kicker dark">COMPOSICIÓN CORPORAL</p>
-        <h2>Cada indicador con inicio, cambio y tendencia</h2>
-      </div>
-      <p id="compositionPeriodNote">—</p>
-    </section>
-
-    <section class="composition-grid">
-      <article class="composition-card" data-metric="body_fat_pct">
-        <div class="composition-head"><span>Grasa corporal</span><strong id="bodyFat">—</strong></div>
-        <p class="definition" id="bodyFatPeriod">—</p>
-        <div id="bodyFatChart" class="mini-chart"></div>
-        <div class="metric-row"><span>Inicio</span><strong id="bodyFatStart">—</strong></div>
-        <div class="metric-row"><span>Cambio</span><strong id="bodyFatChange">—</strong></div>
-        <p id="bodyFatText" class="plain-note"></p>
-      </article>
-
-      <article class="composition-card" data-metric="muscle_mass_kg">
-        <div class="composition-head"><span>Masa muscular</span><strong id="muscleMass">—</strong></div>
-        <p class="definition" id="musclePeriod">—</p>
-        <div id="muscleChart" class="mini-chart"></div>
-        <div class="metric-row"><span>Inicio</span><strong id="muscleStart">—</strong></div>
-        <div class="metric-row"><span>Cambio</span><strong id="muscleChange">—</strong></div>
-        <p id="muscleText" class="plain-note"></p>
-      </article>
-
-      <article class="composition-card" data-metric="body_water_pct">
-        <div class="composition-head"><span>Agua corporal</span><strong id="bodyWater">—</strong></div>
-        <p class="definition" id="waterPeriod">—</p>
-        <div id="waterChart" class="mini-chart"></div>
-        <div class="metric-row"><span>Inicio</span><strong id="waterStart">—</strong></div>
-        <div class="metric-row"><span>Cambio</span><strong id="waterChange">—</strong></div>
-        <p id="waterText" class="plain-note"></p>
-      </article>
-
-      <article class="composition-card" data-metric="visceral_fat_index">
-        <div class="composition-head"><span>Grasa visceral</span><strong id="visceralFat">—</strong></div>
-        <p class="definition" id="visceralPeriod">—</p>
-        <div id="visceralChart" class="mini-chart"></div>
-        <div class="metric-row"><span>Inicio</span><strong id="visceralStart">—</strong></div>
-        <div class="metric-row"><span>Cambio</span><strong id="visceralChange">—</strong></div>
-        <p id="visceralText" class="plain-note"></p>
-      </article>
-    </section>
-
-    <section class="two-col">
-      <article class="panel">
-        <div class="panel-head"><h2>Qué requiere atención</h2><span id="quality" class="status-pill">—</span></div>
-        <div id="alerts" class="attention-list"></div>
-      </article>
-      <article class="panel">
-        <div class="panel-head"><h2>Próximo recordatorio</h2><span id="nextReminderTime" class="status-pill">—</span></div>
-        <div id="nextReminder" class="reminder-big">—</div>
-        <p class="plain-note">Los recordatorios del cliente de escritorio podrán marcarse como hecho, posponerse o descartarse sin alterar tus mediciones.</p>
-      </article>
-    </section>
+        <div id="activityTimeline" class="activity-timeline"></div>
+        <div id="activityMiniChart" class="wide-mini-chart"></div>
+      </section>
+    </div>
   </main>
-  <script src="/static/app.js?v=20260922-3"></script>
+
+  <script src="/static/app.js?v=20260922-4"></script>
 </body>
 </html>
