@@ -94,18 +94,25 @@ def next_reminder(db: Session) -> dict | None:
     now = datetime.now(settings.timezone)
     now_utc = datetime.now(UTC).replace(tzinfo=None)
     today = now.date()
+    today_start, _ = local_day_bounds_utc(today)
     candidates = []
     for reminder in reminders:
         latest_event = db.scalar(
-            select(ReminderEvent).where(ReminderEvent.reminder_id == reminder.id).order_by(ReminderEvent.event_at.desc()).limit(1)
+            select(ReminderEvent)
+            .where(ReminderEvent.reminder_id == reminder.id, ReminderEvent.event_at >= today_start)
+            .order_by(ReminderEvent.event_at.desc())
+            .limit(1)
         )
-        if latest_event and latest_event.action == "snooze" and latest_event.snoozed_until and latest_event.snoozed_until > now_utc:
+        if latest_event and latest_event.action == "snooze" and latest_event.snoozed_until:
             due_local = latest_event.snoozed_until.replace(tzinfo=UTC).astimezone(settings.timezone)
-            candidates.append((due_local, reminder, "snoozed"))
+            candidates.append((due_local, reminder, "snoozed" if latest_event.snoozed_until > now_utc else "snooze_due"))
             continue
+
         hour, minute = map(int, reminder.time_local.split(":"))
         due = datetime.combine(today, time(hour, minute), tzinfo=settings.timezone)
-        if due < now:
+        if latest_event and latest_event.action in {"done", "dismiss"}:
+            due += timedelta(days=1)
+        elif due < now:
             due += timedelta(days=1)
         candidates.append((due, reminder, "scheduled"))
     due, reminder, state = min(candidates, key=lambda x: x[0])
