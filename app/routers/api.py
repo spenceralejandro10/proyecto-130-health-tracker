@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from ..audit import audit
 from ..config import settings
 from ..db import get_db
+from ..interpretation import trend_analysis
 from ..models import (
     Activity,
     AuditLog,
@@ -109,8 +110,9 @@ def project_series(days: int = Query(default=132, ge=7, le=365), db: Session = D
     activity_by_day = {}
     integrated_by_day = {}
     for row in activities:
-        day = row.started_at.date().isoformat()
-        if row.started_at.date() < start:
+        local_day = row.started_at.replace(tzinfo=UTC).astimezone(settings.timezone).date()
+        day = local_day.isoformat()
+        if local_day < start:
             continue
         activity_by_day[day] = round(activity_by_day.get(day, 0) + float(row.duration_min), 1)
         if row.integrated:
@@ -129,6 +131,7 @@ def project_series(days: int = Query(default=132, ge=7, le=365), db: Session = D
         "activity_minutes": activity_by_day,
         "integrated_minutes": integrated_by_day,
         "sleep_hours": sleep_by_day,
+        "analysis": trend_analysis(db, days),
         "note": "Las series usan unidades distintas. El gráfico las normaliza contra su propia línea base y conserva los valores reales en etiquetas.",
     }
 
