@@ -10,9 +10,9 @@ class Settings(BaseSettings):
     app_name: str = "Proyecto 130"
     database_url: str = "sqlite:///./data/proyecto130.db"
     api_key: str = ""
-    project_length_days: int = 130
-    goal_weight_kg: float = 95.0
-    project_start_date: date | None = None
+    project_length_days: int = 132
+    goal_weight_kg: float = 90.0
+    project_start_date: date | None = date(2026, 9, 22)
     default_timezone: str = "America/Bogota"
     demo_data: bool = False
 
