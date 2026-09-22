@@ -55,7 +55,7 @@ def test_interpretation_distinguishes_observation_from_hypothesis():
     assert "agua corporal subió" in analysis["summary"].lower()
     assert "grasa corporal bajó" in analysis["summary"].lower()
     assert "+1" in analysis["headline"] or "subió 1" in analysis["headline"].lower()
-    assert "tmb calculada" in " ".join(analysis["limits"]).lower()
+    assert "mifflin-st jeor" in " ".join(analysis["limits"]).lower()
 
 
 def test_interpretation_never_calls_device_estimates_direct_measurements():
