@@ -83,7 +83,7 @@ function renderResearchSummary(series){
       <strong>${escapeHtml(s.headline)}</strong>
       <span>${s.sample_count} registros · promedio ${num(s.average,1)} ${escapeHtml(s.unit)} · mínimo ${num(s.minimum,1)} · máximo ${num(s.maximum,1)}</span>
     </div>`;
-    $('chartFocusNote').textContent=`${METRICS[selectedMetric].label}: se muestran únicamente sus cambios dentro del período seleccionado.`;
+    $('chartFocusNote').textContent=`${METRICS[selectedMetric].label} · ${s.sample_count} registros · cambio del período ${signed(s.delta_period,1,' '+s.delta_unit)}.`;
     return;
   }
 
@@ -91,7 +91,7 @@ function renderResearchSummary(series){
   $('researchSummary').innerHTML=findings.length
     ? `<div class="trend-readout"><strong>Lectura del período</strong>${findings.map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div>`
     : '<div class="trend-readout"><strong>Sin cambios comparables suficientes en este período.</strong></div>';
-  $('chartFocusNote').textContent='Vista combinada de los indicadores con datos comparables en el período.';
+  $('chartFocusNote').textContent=`${Object.keys(summaries).length} indicadores con datos en el período · lectura combinada automática.`;
 }
 
 function renderResearchChart(series){
