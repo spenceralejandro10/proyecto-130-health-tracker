@@ -144,3 +144,4 @@ class DashboardResponse(BaseModel):
     data_quality: str
     composition: dict
     interpretation: dict
+    goal_pace: dict
