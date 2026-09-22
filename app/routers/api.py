@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..audit import audit
 from ..config import settings
 from ..db import get_db
-from ..interpretation import trend_analysis
+from ..interpretation import energy_history, trend_analysis
 from ..models import (
     Activity,
     AuditLog,
@@ -132,6 +132,7 @@ def project_series(days: int = Query(default=132, ge=7, le=365), db: Session = D
         "integrated_minutes": integrated_by_day,
         "sleep_hours": sleep_by_day,
         "analysis": trend_analysis(db, days),
+        "energy_history": energy_history(db, days),
         "note": "Las series usan unidades distintas. El gráfico las normaliza contra su propia línea base y conserva los valores reales en etiquetas.",
     }
 
