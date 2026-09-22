@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     goal_weight_kg: float = 95.0
     project_start_date: date | None = None
     default_timezone: str = "America/Bogota"
+    demo_data: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
