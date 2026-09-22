@@ -92,7 +92,7 @@ def trend(metric_key: str, days: int = Query(default=7, ge=1, le=365), db: Sessi
 
 
 @router.get("/project-series")
-def project_series(days: int = Query(default=130, ge=7, le=365), db: Session = Depends(get_db)):
+def project_series(days: int = Query(default=132, ge=7, le=365), db: Session = Depends(get_db)):
     """Serie unificada para el tablero ejecutivo.
 
     Devuelve datos crudos/estimados con unidades explícitas. La normalización
