@@ -33,6 +33,15 @@ class MetricRecord(Base, TimestampMixin):
     rule_version: Mapped[str] = mapped_column(String(32), default="v1")
 
 
+class UserProfile(Base, TimestampMixin):
+    __tablename__ = "user_profile"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    height_cm: Mapped[float] = mapped_column(Float, nullable=False)
+    age_years: Mapped[int] = mapped_column(Integer, nullable=False)
+    sex: Mapped[str] = mapped_column(String(16), nullable=False)
+
+
 class Activity(Base, TimestampMixin):
     __tablename__ = "activities"
     __table_args__ = (UniqueConstraint("source_event_id", name="uq_activity_source_event"),)
