@@ -268,7 +268,7 @@ def dashboard(db: Session) -> dict:
     if start:
         elapsed = (today - start).days
         day_number = max(1, elapsed + 1)
-        days_remaining = max(0, settings.project_length_days - day_number)
+        days_remaining = max(0, (settings.project_end_date - today).days)
     else:
         day_number = None
         days_remaining = None
