@@ -184,12 +184,28 @@ function renderWeight(d, series){
   }
 }
 
+const PROJECT_START = new Date('2026-09-22T00:00:00-05:00');
+const PROJECT_END = new Date('2027-02-01T00:00:00-05:00');
+const PROJECT_TOTAL_DAYS = 132;
+
+function updateCountdown(){
+  const el=$('countdown'); if(!el) return;
+  const ms=Math.max(0,PROJECT_END-new Date());
+  const days=Math.floor(ms/86400000);
+  const hours=Math.floor((ms%86400000)/3600000);
+  const minutes=Math.floor((ms%3600000)/60000);
+  const seconds=Math.floor((ms%60000)/1000);
+  el.textContent=ms>0?`${days}d ${String(hours).padStart(2,'0')}h ${String(minutes).padStart(2,'0')}m ${String(seconds).padStart(2,'0')}s`:'META · 1 FEB 2027';
+}
+
 function renderStudy(d){
-  $('day').textContent=d.day_number?`Día ${d.day_number} de 130`:'Inicio pendiente';
-  $('remaining').textContent=d.days_remaining??'—';
-  const startFeb=new Date('2027-02-01T00:00:00');
-  const now=new Date(); const days=Math.max(0,Math.ceil((startFeb-now)/(1000*60*60*24)));
-  $('tripNote').textContent=`Faltan aproximadamente ${days} días para comenzar febrero de 2027. La fecha exacta del vuelo aún no está configurada.`;
+  const now=new Date();
+  const elapsed=Math.max(0,Math.min(PROJECT_TOTAL_DAYS,Math.floor((now-PROJECT_START)/86400000)+1));
+  const remaining=Math.max(0,Math.ceil((PROJECT_END-now)/86400000));
+  $('day').textContent=`Día ${elapsed} de ${PROJECT_TOTAL_DAYS}`;
+  $('remaining').textContent=remaining;
+  $('tripNote').textContent='Fecha objetivo del proyecto: 1 de febrero de 2027.';
+  updateCountdown();
 }
 
 function renderActivity(activities, series){
@@ -262,4 +278,6 @@ document.querySelectorAll('.range-btn').forEach(btn=>btn.addEventListener('click
 }));
 
 load(14);
+updateCountdown();
+setInterval(updateCountdown,1000);
 setInterval(()=>load(Number(document.querySelector('.range-btn.active')?.dataset.days||14)),60000);
