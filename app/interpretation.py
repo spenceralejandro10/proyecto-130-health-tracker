@@ -93,8 +93,11 @@ def _usable_metrics(db: Session) -> list[MetricRecord]:
 
 def _snapshots(db: Session, since: date | None = None) -> list[dict[str, Any]]:
     by_day: dict[date, dict[str, MetricRecord]] = defaultdict(dict)
+    today = datetime.now(settings.timezone).date()
     for row in _usable_metrics(db):
         day = utc_naive_to_local_date(row.captured_at)
+        if day > today:
+            continue
         if since and day < since:
             continue
         # Última lectura válida de cada indicador en el día = lectura canónica.
@@ -442,7 +445,8 @@ def trend_analysis(db: Session, days: int) -> dict[str, Any]:
         if points:
             summaries[key] = _series_summary(key, points, days)
 
-    sleeps = list(db.scalars(select(SleepRecord).where(SleepRecord.sleep_date >= start, SleepRecord.duration_min.is_not(None)).order_by(SleepRecord.sleep_date.asc())).all())
+    today = datetime.now(settings.timezone).date()
+    sleeps = list(db.scalars(select(SleepRecord).where(SleepRecord.sleep_date >= start, SleepRecord.sleep_date <= today, SleepRecord.duration_min.is_not(None)).order_by(SleepRecord.sleep_date.asc())).all())
     sleep_points = [(row.sleep_date, float(row.duration_min) / 60) for row in sleeps]
     if sleep_points:
         summaries["sleep_hours"] = _series_summary("sleep_hours", sleep_points, days)
@@ -450,7 +454,7 @@ def trend_analysis(db: Session, days: int) -> dict[str, Any]:
     activity_by_day: dict[date, float] = defaultdict(float)
     for row in db.scalars(select(Activity).order_by(Activity.started_at.asc())).all():
         local_day = utc_naive_to_local_date(row.started_at)
-        if local_day >= start:
+        if start <= local_day <= today:
             activity_by_day[local_day] += float(row.duration_min)
     activity_points = [(day, activity_by_day[day]) for day in sorted(activity_by_day)]
     if activity_points:
