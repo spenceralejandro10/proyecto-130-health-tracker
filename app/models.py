@@ -6,6 +6,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 from .db import Base
 
 
+def utcnow_naive() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow_naive, nullable=False)
 
@@ -54,6 +58,7 @@ class Activity(Base, TimestampMixin):
 
 class StrengthSet(Base, TimestampMixin):
     __tablename__ = "strength_sets"
+    __table_args__ = (UniqueConstraint("source_event_id", name="uq_strength_source_event"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     performed_at: Mapped[datetime] = mapped_column(DateTime, index=True, nullable=False)
@@ -65,6 +70,7 @@ class StrengthSet(Base, TimestampMixin):
     rpe: Mapped[int | None] = mapped_column(Integer)
     pain_score: Mapped[int | None] = mapped_column(Integer)
     notes: Mapped[str | None] = mapped_column(Text)
+    source_event_id: Mapped[str | None] = mapped_column(String(160))
 
 
 class SleepRecord(Base, TimestampMixin):
