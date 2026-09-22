@@ -155,11 +155,45 @@ function renderResearchChart(series){
   renderResearchSummary(series);
 }
 
+function renderEnergy(d){
+  const e=d.interpretation?.energy||{};
+  const resting=e.resting_kcal_day;
+  const restingChange=e.resting_change_kcal_day;
+  const activity=e.activity_kcal;
+  const activityMin=e.activity_minutes;
+  const accounted=e.accounted_expenditure_kcal;
+  const intake=e.intake_kcal;
+  const balance=e.partial_balance_kcal;
+
+  $('restingEnergy').textContent=resting==null?'—':`${Math.round(resting)} kcal/día`;
+  $('restingEnergyValue').textContent=resting==null?'—':`${Math.round(resting)} kcal/día`;
+  $('restingEnergyChange').textContent=restingChange==null?'Primera estimación':`${restingChange>0?'+':''}${Math.round(restingChange)} kcal/día vs. medición anterior`;
+  $('activityEnergy').textContent=activity==null?'Sin registro':`≈ ${Math.round(activity)} kcal`;
+  $('activityEnergyMinutes').textContent=activityMin==null?'No hay actividad cargada ese día':`${Math.round(activityMin)} min registrados`;
+  $('accountedEnergy').textContent=accounted==null?'—':`${Math.round(accounted)} kcal`;
+  $('intakeEnergy').textContent=intake==null?'Sin registro':`${Math.round(intake)} kcal`;
+
+  if(balance==null) $('energyBalance').textContent='Sin balance calculable';
+  else if(balance<0) $('energyBalance').textContent=`Déficit parcial: ${Math.round(Math.abs(balance))} kcal`;
+  else if(balance>0) $('energyBalance').textContent=`Superávit parcial: ${Math.round(balance)} kcal`;
+  else $('energyBalance').textContent='Balance parcial: 0 kcal';
+
+  const lean=e.lean_mass_est_kg;
+  const parts=[];
+  if(resting!=null) parts.push(`Con la composición actual, el gasto en reposo estimado es ${Math.round(resting)} kcal/día`);
+  if(restingChange!=null) parts.push(`cambió ${restingChange>0?'+':''}${Math.round(restingChange)} kcal/día desde la medición anterior`);
+  if(lean!=null) parts.push(`masa libre de grasa estimada: ${num(lean,1)} kg`);
+  if(activity!=null) parts.push(`actividad registrada: ≈${Math.round(activity)} kcal`);
+  if(intake!=null) parts.push(`ingesta: ${Math.round(intake)} kcal`);
+  if(balance!=null) parts.push(`${balance<0?'déficit':'superávit'} parcial: ${Math.round(Math.abs(balance))} kcal`);
+  $('energySummary').textContent=parts.length?parts.join(' · ')+'.':'Sin datos suficientes para calcular el estado energético.';
+}
+
 function renderInterpretation(d){
   const a=d.interpretation;
   if(!a) return;
-  const confidence=a.confidence?.level||'baja';
-  $('analysisConfidence').textContent=`Confianza ${confidence}`;
+  const compared=a.confidence?.variables_compared??0;
+  $('analysisConfidence').textContent=`${compared} variables cruzadas`;
   $('analysisPeriod').textContent=a.compared_with
     ? `Comparación: ${a.compared_with} → ${a.as_of}`
     : `Fecha de referencia: ${a.as_of||'sin datos'}`;
@@ -187,7 +221,7 @@ function renderInterpretation(d){
   $('analysisHypotheses').innerHTML=findings.length?findings.map(h=>`<div class="analysis-hypothesis">
     <div class="analysis-hypothesis-head">
       <strong>${escapeHtml(h.label)}</strong>
-      <span class="analysis-confidence">Confianza ${escapeHtml(h.confidence)}</span>
+      <span class="analysis-confidence">Dato cruzado</span>
     </div>
     <p>${escapeHtml(h.explanation)}</p>
   </div>`).join(''):'<p class="plain-note">No hay un cambio corporal adicional que explicar todavía.</p>';
@@ -227,8 +261,8 @@ function renderComposition(series, interpretation=null){
     $(currentId).textContent=`${num(last)} ${unit}`;
     $(startId).textContent=`${num(first)} ${unit}`;
     $(changeId).textContent=signed(diff,1,unit==='%'?' puntos':' '+unit);
-    $(periodId).textContent=rangeSummaries[key]?.headline||`${METRICS[key].label}: ${num(last)} ${unit}.`;
-    $(textId).textContent=latestMessages[key]||'Sin una medición anterior comparable.';
+    $(periodId).textContent=latestMessages[key]||rangeSummaries[key]?.headline||`${METRICS[key].label}: ${num(last)} ${unit}.`;
+    $(textId).textContent=rangeSummaries[key]?.headline||'Sin una segunda lectura en el período.';
     sparkline($(chartId),p);
   });
 }
@@ -351,6 +385,7 @@ async function load(days=14){
     renderComposition(series,dashboard.interpretation);
     renderResearchChart(series);
     renderInterpretation(dashboard);
+    renderEnergy(dashboard);
     renderAlerts(dashboard);
     $('sync').textContent=`Actualizado ${new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
   }catch(e){
