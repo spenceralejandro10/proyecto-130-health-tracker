@@ -81,6 +81,28 @@
       <p class="chart-note">Peso, grasa, músculo, agua, sueño y actividad tienen unidades distintas. Esta vista compara su dirección y cambio relativo; no mezcla sus unidades.</p>
     </section>
 
+    <section class="panel analysis-panel">
+      <div class="panel-head analysis-title">
+        <div>
+          <p class="kicker dark">MOTOR DE INTERPRETACIÓN</p>
+          <h2>Qué cambió y qué puede explicarlo</h2>
+          <p>El sistema separa los cambios calculados de las hipótesis. Ninguna variación de grasa, músculo o agua se presenta como un hecho si la báscula solo permite estimarla.</p>
+        </div>
+        <span id="analysisConfidence" class="status-pill">Confianza —</span>
+      </div>
+      <div class="analysis-lead">
+        <strong id="analysisHeadline">Esperando datos comparables…</strong>
+        <p id="analysisSummary" class="plain-note"></p>
+      </div>
+      <div id="analysisObservations" class="analysis-observations"></div>
+      <div id="analysisHypotheses" class="analysis-hypotheses"></div>
+      <p id="analysisDecisionNote" class="analysis-decision"></p>
+      <details class="analysis-limits">
+        <summary>Qué no puede afirmar el sistema con estos datos</summary>
+        <div id="analysisLimits"></div>
+      </details>
+    </section>
+
     <section class="panel">
       <div class="panel-head">
         <div>
