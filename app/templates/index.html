@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Proyecto 130</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">PROYECTO 130</p>
+      <h1>Estado de hoy</h1>
+    </div>
+    <div id="sync" class="sync">Cargando…</div>
+  </header>
+
+  <main class="shell">
+    <section id="message" class="message"></section>
+
+    <section class="grid metrics">
+      <article class="card"><span>Peso actual</span><strong id="weight">—</strong><small id="weightDelta">Sin línea base</small></article>
+      <article class="card"><span>Promedio 7 días</span><strong id="avg7">—</strong><small>Tendencia, no lectura aislada</small></article>
+      <article class="card"><span>Día del ciclo</span><strong id="day">—</strong><small id="remaining">Inicio pendiente</small></article>
+      <article class="card"><span>Actividad hoy</span><strong id="activity">0 min</strong><small id="integrated">0 min integrados</small></article>
+      <article class="card"><span>Sueño reciente</span><strong id="sleep">—</strong><small>Contexto de recuperación</small></article>
+      <article class="card"><span>Próximo recordatorio</span><strong id="nextReminder">—</strong><small id="nextReminderTime">Sin recordatorios</small></article>
+    </section>
+
+    <section class="two-col">
+      <article class="panel">
+        <div class="panel-head"><h2>Alertas y revisión</h2><span class="pill" id="quality">—</span></div>
+        <ul id="alerts" class="alerts"><li>Sin alertas.</li></ul>
+      </article>
+
+      <article class="panel">
+        <h2>Registro rápido</h2>
+        <div class="tabs">
+          <button class="tab active" data-tab="weightForm">Peso</button>
+          <button class="tab" data-tab="activityForm">Actividad</button>
+          <button class="tab" data-tab="strengthForm">Fuerza</button>
+          <button class="tab" data-tab="sleepForm">Sueño</button>
+        </div>
+
+        <form id="weightForm" class="quick-form active">
+          <label>Peso (kg)<input name="value" type="number" step="0.1" min="0" required></label>
+          <label>Fuente<input name="source" value="Xiaomi Mi Body Composition Scale 2" required></label>
+          <label>Evidencia / referencia<input name="evidence_ref" placeholder="foto/captura opcional"></label>
+          <button type="submit">Registrar peso</button>
+        </form>
+
+        <form id="activityForm" class="quick-form">
+          <label>Actividad<input name="activity_type" value="walk" required></label>
+          <label>Duración (min)<input name="duration_min" type="number" step="1" min="1" required></label>
+          <label class="check"><input name="integrated" type="checkbox"> Actividad integrada con estudio/conversación</label>
+          <button type="submit">Registrar actividad</button>
+        </form>
+
+        <form id="strengthForm" class="quick-form">
+          <label>Ejercicio<input name="exercise_name" required></label>
+          <div class="row"><label>Carga kg<input name="load_kg" type="number" step="0.5" min="0" required></label><label>Reps<input name="reps" type="number" min="1" required></label></div>
+          <label>Serie<input name="set_number" type="number" value="1" min="1" required></label>
+          <button type="submit">Registrar serie</button>
+        </form>
+
+        <form id="sleepForm" class="quick-form">
+          <label>Fecha<input name="sleep_date" type="date" required></label>
+          <label>Duración (min)<input name="duration_min" type="number" min="0"></label>
+          <div class="row"><label>Energía 1-10<input name="energy_score" type="number" min="1" max="10"></label><label>Fatiga 1-10<input name="fatigue_score" type="number" min="1" max="10"></label></div>
+          <button type="submit">Registrar sueño</button>
+        </form>
+        <p id="formStatus" class="form-status"></p>
+      </article>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
