@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     project_length_days: int = 132
     goal_weight_kg: float = 90.0
     project_start_date: date | None = date(2026, 9, 22)
+    project_end_date: date = date(2027, 2, 1)
     default_timezone: str = "America/Bogota"
     demo_data: bool = False
 
