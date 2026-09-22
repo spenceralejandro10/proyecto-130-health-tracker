@@ -461,6 +461,13 @@ def trend_analysis(db: Session, days: int) -> dict[str, Any]:
         summaries["activity_minutes"] = _series_summary("activity_minutes", activity_points, days)
 
     visible_findings: list[str] = []
+    weighted_snapshots = [item for item in snapshots if "weight_kg" in item["values"]]
+    if len(weighted_snapshots) >= 2:
+        period_findings = _integrated_findings(weighted_snapshots[-1], weighted_snapshots[0])
+        visible_findings.extend(
+            f"{item['label']}. {item['explanation']}" for item in period_findings[:3]
+        )
+
     for key in ("weight_kg", "body_fat_pct", "muscle_mass_kg", "body_water_pct", "visceral_fat_index"):
         item = summaries.get(key)
         if item and item["sample_count"] >= 2:
