@@ -16,7 +16,7 @@ def _metric(day: str, key: str, value: float, unit: str, origin: str = "device_e
             "source": "BIA test fixture",
             "origin": origin,
             "validation_status": "confirmed" if key == "weight_kg" else "estimated",
-            "source_event_id": f"interpretation-{day}-{key}",
+            "source_event_id": f"interpretation-{day}-{key}-{value}",
         },
     )
     assert response.status_code == 201
@@ -39,22 +39,22 @@ def test_interpretation_distinguishes_observation_from_hypothesis():
     }
 
     for key, (value, unit) in baseline.items():
-        _metric("2030-01-01", key, value, unit, "measured" if key == "weight_kg" else "device_estimated")
+        _metric("2026-09-21", key, value, unit, "measured" if key == "weight_kg" else "device_estimated")
     for key, (value, unit) in current.items():
-        _metric("2030-01-02", key, value, unit, "measured" if key == "weight_kg" else "device_estimated")
+        _metric("2026-09-22", key, value, unit, "measured" if key == "weight_kg" else "device_estimated")
 
     dashboard = client.get("/api/dashboard")
     assert dashboard.status_code == 200
     analysis = dashboard.json()["interpretation"]
 
     assert analysis["status"] == "ready"
-    assert analysis["as_of"] == "2030-01-02"
-    assert analysis["compared_with"] == "2030-01-01"
+    assert analysis["as_of"] == "2026-09-22"
+    assert analysis["compared_with"] == "2026-09-21"
     assert any(item["key"] == "fat_mass_est_kg" and item["kind"] == "derivado" for item in analysis["observations"])
     assert any(item["code"] == "fluid_compatible_gain" for item in analysis["hypotheses"])
     assert "masa de agua estimada" in analysis["summary"].lower()
     assert "+1" in analysis["headline"] or "subió 1" in analysis["headline"].lower()
-    assert "demostrar" in " ".join(analysis["limits"]).lower() or "no equivale" in " ".join(analysis["limits"]).lower()
+    assert "medición clínica" in " ".join(analysis["limits"]).lower()
 
 
 def test_interpretation_never_calls_device_estimates_direct_measurements():
