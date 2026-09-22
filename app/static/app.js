@@ -294,6 +294,8 @@ function renderEnergy(d){
   else $('energyBalance').textContent='Balance parcial: 0 kcal';
 
   const lean=e.lean_mass_est_kg;
+  const method=e.resting_method;
+  if($('metabolismMethod')) $('metabolismMethod').textContent=method==='mifflin_st_jeor'?'Peso + estatura + edad':'Composición corporal';
   const parts=[];
   if(resting!=null) parts.push(`Con la composición actual, el gasto en reposo estimado es ${Math.round(resting)} kcal/día`);
   if(restingChange!=null) parts.push(`cambió ${restingChange>0?'+':''}${Math.round(restingChange)} kcal/día desde la medición anterior`);
@@ -491,11 +493,17 @@ function renderAlerts(d){
 async function load(days=14){
   try{
     $('sync').textContent='Actualizando…';
-    const [dashboard,series,activities]=await Promise.all([
+    const [dashboard,series,activities,profile]=await Promise.all([
       api('/api/dashboard'),
       api(`/api/project-series?days=${days}`),
-      api('/api/activities?limit=250')
+      api('/api/activities?limit=250'),
+      api('/api/profile')
     ]);
+    if(profile){
+      if($('profileHeight')) $('profileHeight').value=profile.height_cm??'';
+      if($('profileAge')) $('profileAge').value=profile.age_years??'';
+      if($('profileSex')) $('profileSex').value=profile.sex??'';
+    }
     renderWeight(dashboard,series);
     renderGoalPace(dashboard);
     renderStudy(dashboard);
@@ -523,6 +531,24 @@ document.querySelectorAll('.workspace-tab').forEach(btn=>btn.addEventListener('c
     view.hidden=!active;
   });
 }));
+
+const profileForm=$('profileForm');
+if(profileForm) profileForm.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const payload={
+    height_cm:Number($('profileHeight').value),
+    age_years:Number($('profileAge').value),
+    sex:$('profileSex').value
+  };
+  try{
+    $('profileStatus').textContent='Guardando…';
+    await api('/api/profile',{method:'PUT',body:JSON.stringify(payload)});
+    $('profileStatus').textContent='Perfil guardado. El gasto en reposo fue recalculado.';
+    await load(Number(document.querySelector('.range-btn.active')?.dataset.days||14));
+  }catch(e){
+    $('profileStatus').textContent=`No se pudo guardar: ${e.message}`;
+  }
+});
 
 const nutritionDate=$('nutritionDate');
 if(nutritionDate) nutritionDate.value=todayKey();
